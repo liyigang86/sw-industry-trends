@@ -1,0 +1,763 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="申万一级行业趋势、相对强弱与近期轮动热力图">
+  <title>申万一级行业趋势</title>
+    <link rel="stylesheet" href="styles.css?v=20261109-rankflow3">
+  <script>
+    (() => {
+      const saved = localStorage.getItem("sw-trend-theme");
+      const theme = saved || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
+</head>
+<body>
+  <div class="page-shell">
+    <header class="topbar">
+      <a class="brand" href="#" aria-label="申万一级行业趋势首页">
+        <span class="brand-mark" aria-hidden="true">申</span>
+        <span>
+          <strong>行业趋势台</strong>
+          <small>SHENWAN LEVEL 1</small>
+        </span>
+      </a>
+      <div class="topbar-meta">
+        <span class="data-status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span id="as-of-date">数据载入中</span>
+          <span class="frequency-badge" id="frequency-badge">日线</span>
+          <span class="refresh-status" id="refresh-status">检查更新中…</span>
+        </span>
+        <button class="theme-toggle" id="theme-toggle" type="button" aria-label="切换浅色或深色主题">
+          <span id="theme-label">深色</span>
+        </button>
+      </div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div class="intro-copy">
+          <p class="eyebrow">MARKET ROTATION / 市场轮动</p>
+          <h1>申万一级行业趋势</h1>
+          <p class="lede">从绝对回报、相对强弱与均线结构，快速识别 31 个申万一级行业正在增强或减弱的趋势。</p>
+        </div>
+        <div class="controls" aria-label="图表筛选">
+          <div class="control-block">
+            <span class="control-label">数据周期</span>
+            <div class="segmented" id="frequency-control" role="group" aria-label="数据周期">
+              <button type="button" data-frequency="day" aria-pressed="true" class="is-active">日线</button>
+              <button type="button" data-frequency="week" aria-pressed="false">周线</button>
+              <button type="button" data-frequency="month" aria-pressed="false">月线</button>
+            </div>
+          </div>
+          <div class="control-block">
+            <span class="control-label">时间区间</span>
+            <div class="segmented" id="range-control" role="group" aria-label="时间区间">
+              <button type="button" data-range="4">1月</button>
+              <button type="button" data-range="13">3月</button>
+              <button type="button" data-range="26" aria-pressed="true" class="is-active">6月</button>
+              <button type="button" data-range="52">1年</button>
+              <button type="button" data-range="156">3年</button>
+              <button type="button" data-range="999">全部</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <nav class="view-tabs" id="view-tabs" aria-label="页面内容切换">
+        <button type="button" data-view-tab="industry" class="is-active" aria-pressed="true">
+          <span>行业趋势</span>
+          <small>全景、相对强弱与轮动</small>
+        </button>
+        <button type="button" data-view-tab="bias" aria-pressed="false">
+          <span>乖离率</span>
+          <small>均线偏离与历史分位</small>
+        </button>
+        <button type="button" data-view-tab="flow" aria-pressed="false">
+          <span>资金温度</span>
+          <small>主力净流入、占比与量比</small>
+        </button>
+        <button type="button" data-view-tab="concept" aria-pressed="false">
+          <span>概念热点</span>
+          <small>热点、轮动与概念选股</small>
+        </button>
+        <button type="button" data-view-tab="company" aria-pressed="false">
+          <span>公司研究</span>
+          <small>公司定位、基本面与估值</small>
+        </button>
+      </nav>
+
+      <section class="company-locator-panel" id="company-locator-panel" aria-label="公司优先查询">
+        <div class="company-locator-copy">
+          <p class="panel-kicker">COMPANY FIRST</p>
+          <h2>直接查公司</h2>
+          <span>输入公司简称或代码后，系统自动定位申万一级、二级行业</span>
+        </div>
+        <div class="company-locator-search">
+          <label for="global-company-search">公司名称或股票代码</label>
+          <input
+            id="global-company-search"
+            type="search"
+            placeholder="例如：上海贝岭 / 600171"
+            autocomplete="off"
+            aria-controls="global-company-results"
+          >
+          <div class="company-locator-results" id="global-company-results" role="listbox" hidden></div>
+          <p class="company-locator-status" id="global-company-status">
+            无需先选择行业，可直接从公司开始。
+          </p>
+        </div>
+      </section>
+
+      <div class="view-pane is-active" id="industry-view" data-view-pane="industry">
+      <section class="metrics" id="summary-metrics" aria-label="区间市场概览">
+        <article class="metric">
+          <span class="metric-label">趋势广度</span>
+          <strong class="metric-value" id="breadth-value">--</strong>
+          <span class="metric-note" id="breadth-note">行业走势载入中</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">区间领涨</span>
+          <strong class="metric-value" id="leader-value">--</strong>
+          <span class="metric-note" id="leader-note">按区间涨幅</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">行业分化</span>
+          <strong class="metric-value" id="spread-value">--</strong>
+          <span class="metric-note" id="spread-note">首尾行业收益差</span>
+        </article>
+        <article class="metric">
+          <span class="metric-label">沪深300</span>
+          <strong class="metric-value" id="benchmark-value">--</strong>
+          <span class="metric-note">同期累计收益</span>
+        </article>
+      </section>
+
+      <section class="panel flow-panel" id="industry-flow-panel" aria-labelledby="flow-heading">
+        <div class="panel-heading flow-heading">
+          <div>
+            <p class="panel-kicker">CAPITAL &amp; VOLUME</p>
+            <h2 id="flow-heading">行业资金温度</h2>
+          </div>
+          <div class="flow-heading-meta">
+            <span id="industry-flow-time">资金数据载入中</span>
+            <button class="flow-refresh" id="industry-flow-refresh" type="button">刷新</button>
+          </div>
+        </div>
+        <p class="flow-intro">
+          主力净流入来自东方财富盘中行业快照，量比为行业当日成交活跃度相对近期均量水平；数据通常有 1～5 分钟延迟。
+        </p>
+        <div class="flow-summary" id="industry-flow-summary" aria-live="polite">
+          <span>正在载入 31 个行业的资金与量比数据…</span>
+        </div>
+        <div class="flow-controls" id="industry-flow-controls" role="group" aria-label="资金面板排序">
+          <button type="button" data-flow-sort="mainNetInflow" class="is-active" aria-pressed="true">主力净流入</button>
+          <button type="button" data-flow-sort="volumeRatio" aria-pressed="false">行业量比</button>
+          <button type="button" data-flow-sort="changePct" aria-pressed="false">当日涨跌</button>
+          <span>点击行业卡片可切换下方走势</span>
+        </div>
+        <div class="flow-grid" id="industry-flow-grid" aria-live="polite">
+          <p class="flow-empty">资金数据载入中…</p>
+        </div>
+        <p class="flow-disclaimer">
+          “主力净流入”按成交单大小分类估算，不等同于基金申购赎回或真实新增资金。
+        </p>
+      </section>
+
+      <section class="panel sector-board-panel">
+        <div class="panel-heading board-heading">
+          <div>
+            <p class="panel-kicker">ALL 31 INDUSTRIES</p>
+            <h2>全行业趋势全景</h2>
+          </div>
+          <div class="board-key">
+            <span><i class="legend-line color-mix"></i>每个颜色代表一个行业</span>
+            <span><i class="legend-line benchmark sh"></i>上证指数</span>
+            <span><i class="legend-line benchmark hs300"></i>沪深300</span>
+            <span><i class="legend-line benchmark zz1000"></i>中证1000</span>
+            <span><i class="legend-line benchmark zz2000"></i>中证2000</span>
+            <span class="board-count">31 个一级行业</span>
+          </div>
+        </div>
+        <p class="board-intro" id="board-intro">31 条行业走势与上证指数、沪深300、中证1000、中证2000叠加在同一时间轴和收益尺度上；移动到曲线可单独高亮，点击图例可切换下方走势详情。</p>
+        <div class="all-chart-wrap" id="all-chart-wrap">
+          <svg id="all-industries-chart" role="img" aria-label="申万一级行业趋势叠加图" aria-describedby="all-chart-desc">
+            <desc id="all-chart-desc">31 个申万一级行业在所选区间内的累计收益曲线，每个行业使用不同颜色。</desc>
+          </svg>
+        </div>
+        <div class="chart-readout" id="all-chart-tooltip" role="status" aria-live="polite">移到曲线上查看行业与四条大盘指数的同日数值</div>
+        <div class="all-industries-legend" id="all-industries-legend" aria-label="行业图例"></div>
+      </section>
+
+      <section class="workspace">
+        <article class="panel trend-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="panel-kicker">RELATIVE TREND</p>
+              <h2 id="chart-heading">行业走势</h2>
+            </div>
+            <div class="chart-legend" id="detail-legend" aria-label="图例"></div>
+          </div>
+          <div class="trend-picker-row">
+            <div class="control-block select-cluster trend-select-cluster">
+              <div class="select-fields">
+                <label class="select-row">
+                  <span class="control-label">一级行业</span>
+                  <select id="industry-select" aria-label="选择一级行业"></select>
+                </label>
+                <label class="select-row">
+                  <span class="control-label">二级行业</span>
+                  <select id="subindustry-select" aria-label="选择二级行业" disabled></select>
+                </label>
+              </div>
+              <span class="subindustry-note" id="subindustry-note">选择一级后显示</span>
+            </div>
+            <span class="selection-note" id="selection-note">起点归一为 0%</span>
+          </div>
+          <div class="selection-line">
+            <div class="selection-tags">
+              <span class="trend-pill" id="trend-pill">--</span>
+              <span class="code-label" id="industry-code">--</span>
+              <button class="company-jump" id="company-jump" type="button" aria-controls="company-section" hidden>成分公司</button>
+            </div>
+          </div>
+          <div class="chart-wrap" id="chart-wrap">
+            <svg id="trend-chart" role="img" aria-label="行业与大盘指数走势对比" aria-describedby="trend-chart-desc">
+              <desc id="trend-chart-desc">显示所选申万一级行业和沪深300在所选区间内的累计收益。</desc>
+            </svg>
+          </div>
+          <div class="chart-readout" id="chart-tooltip" role="status" aria-live="polite">移到曲线上查看所选行业与四条大盘指数的数值</div>
+          <dl class="detail-stats">
+            <div>
+              <dt>区间收益</dt>
+              <dd id="stat-return">--</dd>
+            </div>
+            <div>
+              <dt>相对沪深300</dt>
+              <dd id="stat-excess">--</dd>
+            </div>
+            <div>
+              <dt>最大回撤</dt>
+              <dd id="stat-drawdown">--</dd>
+            </div>
+            <div>
+              <dt>年化波动</dt>
+              <dd id="stat-volatility">--</dd>
+            </div>
+          </dl>
+        </article>
+
+        <aside class="panel ranking-panel">
+          <div class="panel-heading ranking-heading">
+            <div>
+              <p class="panel-kicker">LEADERS / LAGGARDS</p>
+              <h2>行业强弱</h2>
+            </div>
+            <span class="sort-label">按区间收益</span>
+          </div>
+          <div class="ranking-labels" aria-hidden="true">
+            <span>行业 / 趋势</span>
+            <span>区间</span>
+          </div>
+          <div id="ranking-list" class="ranking-list"></div>
+          <p class="ranking-caption">点击行业切换上方走势；完整强弱分布见下方热力图。</p>
+        </aside>
+
+        <section class="panel company-panel" id="company-section" hidden aria-labelledby="company-heading">
+          <div class="company-heading">
+            <div>
+              <p class="panel-kicker">CONSTITUENTS</p>
+              <h3 id="company-heading">二级行业成分公司</h3>
+            </div>
+            <div class="company-meta">
+              <span id="company-count">--</span>
+              <span id="company-source-date">--</span>
+            </div>
+          </div>
+          <div class="company-toolbar">
+            <label class="company-search">
+              <span>搜索</span>
+              <input id="company-search" type="search" placeholder="公司名称或代码" autocomplete="off">
+            </label>
+            <span class="company-sort">按当日涨跌排序</span>
+          </div>
+          <section class="company-detail" id="company-detail" hidden aria-live="polite">
+            <div class="company-detail-heading">
+              <div>
+                <p class="panel-kicker">COMPANY PROFILE</p>
+                <h4 id="company-detail-name">公司资料</h4>
+                <span id="company-detail-code">--</span>
+              </div>
+              <button type="button" class="company-detail-close" id="company-detail-close">收起</button>
+            </div>
+            <div class="company-detail-body" id="company-detail-body"></div>
+          </section>
+          <div class="company-table-wrap">
+            <table class="company-table">
+              <thead>
+                <tr>
+                  <th scope="col">公司</th>
+                  <th scope="col">代码</th>
+                  <th scope="col" class="numeric">最新价</th>
+                  <th scope="col" class="numeric">当日</th>
+                  <th scope="col" class="numeric">5日</th>
+                  <th scope="col" class="numeric">市值（亿）</th>
+                  <th scope="col" class="numeric">PE(TTM)</th>
+                </tr>
+              </thead>
+              <tbody id="company-table-body"></tbody>
+            </table>
+          </div>
+          <p class="company-footnote" id="company-footnote">
+            成分公司来自乐咕乐股，按申万二级行业分类展示。
+          </p>
+        </section>
+      </section>
+
+      <section class="panel heatmap-panel">
+        <div class="panel-heading heatmap-heading">
+          <div>
+            <p class="panel-kicker">INDUSTRY HEATMAP</p>
+            <h2>行业轮动与持续性</h2>
+          </div>
+          <div class="heatmap-toolbar">
+            <div class="segmented heatmap-level-control" id="heatmap-level-control" role="group" aria-label="行业层级">
+              <button type="button" data-heatmap-level="primary" aria-pressed="true" class="is-active">一级行业</button>
+              <button type="button" data-heatmap-level="secondary" aria-pressed="false">二级行业</button>
+            </div>
+            <div class="segmented heatmap-mode-control" id="heatmap-mode-control" role="group" aria-label="热力图周期">
+              <button type="button" data-heatmap-mode="week" aria-pressed="true" class="is-active">近12周</button>
+              <button type="button" data-heatmap-mode="day" aria-pressed="false">近20日</button>
+            </div>
+            <div class="heatmap-legend" aria-label="涨跌颜色图例">
+              <span id="heatmap-loss-label">周跌幅</span>
+              <i class="legend-swatch" style="--alpha: 0.72"></i>
+              <i class="legend-swatch" style="--alpha: 0.42"></i>
+              <i class="legend-swatch neutral"></i>
+              <i class="legend-swatch up" style="--alpha: 0.42"></i>
+              <i class="legend-swatch up" style="--alpha: 0.72"></i>
+              <span id="heatmap-gain-label">周涨幅</span>
+            </div>
+          </div>
+        </div>
+        <p class="heatmap-intro" id="heatmap-intro">按所选区间收益排序。每格代表一个自然周，名称下的分数为价格趋势与资金历史合成的持续性。</p>
+        <div class="heatmap-shell">
+          <div class="heatmap has-persistence" id="heatmap-grid" role="grid" aria-label="申万一级行业最近12周涨跌热力图"></div>
+        </div>
+        <section class="rotation-stock-drawer" id="rotation-stock-drawer" hidden aria-live="polite">
+          <div class="rotation-stock-drawer-head">
+            <div>
+              <p class="panel-kicker">INDUSTRY CONSTITUENTS</p>
+              <h3 id="rotation-stock-heading">二级行业成分股</h3>
+            </div>
+            <div class="rotation-stock-drawer-meta">
+              <span id="rotation-stock-source">--</span>
+              <button type="button" id="rotation-stock-close">关闭</button>
+            </div>
+          </div>
+          <p class="rotation-stock-note">
+            热力图颜色为行业加权指数；下方按当日涨幅排序展示前20只。点击公司可进入公司研究。
+          </p>
+          <div class="rotation-stock-list" id="rotation-stock-list"></div>
+          <button class="rotation-stock-full" id="rotation-stock-full" type="button" hidden>
+            查看完整成分公司
+          </button>
+        </section>
+      </section>
+      </div>
+
+      <div class="view-pane" id="bias-view" data-view-pane="bias" hidden>
+        <section class="panel bias-control-panel">
+          <div class="panel-heading bias-heading">
+            <div>
+              <p class="panel-kicker">MA BIAS / 均线乖离</p>
+              <h2>31 个行业乖离率观察</h2>
+            </div>
+            <div class="bias-controls">
+              <div class="control-block">
+                <span class="control-label">数据周期</span>
+                <div class="segmented" id="bias-frequency-control" role="group" aria-label="乖离率数据周期">
+                  <button type="button" data-bias-frequency="day" aria-pressed="true" class="is-active">日线</button>
+                  <button type="button" data-bias-frequency="week" aria-pressed="false">周线</button>
+                  <button type="button" data-bias-frequency="month" aria-pressed="false">月线</button>
+                </div>
+              </div>
+              <div class="control-block">
+                <span class="control-label">均线周期</span>
+                <div class="segmented" id="bias-ma-control" role="group" aria-label="乖离率均线周期"></div>
+              </div>
+            </div>
+          </div>
+          <p class="bias-intro">
+            乖离率 =（收盘指数 − 均线）÷ 均线。这里只观察行业相对均线的偏离程度，不生成买卖信号；历史分位用于判断当前偏离在本行业自身历史中的位置。
+          </p>
+        </section>
+
+        <section class="metrics bias-metrics" aria-label="乖离率市场概览">
+          <article class="metric">
+            <span class="metric-label">正乖离行业</span>
+            <strong class="metric-value" id="bias-breadth-value">--</strong>
+            <span class="metric-note" id="bias-breadth-note">行业中位数载入中</span>
+          </article>
+          <article class="metric">
+            <span class="metric-label">行业中位乖离</span>
+            <strong class="metric-value" id="bias-median-value">--</strong>
+            <span class="metric-note">31 个一级行业</span>
+          </article>
+          <article class="metric">
+            <span class="metric-label">最偏强</span>
+            <strong class="metric-value" id="bias-strong-value">--</strong>
+            <span class="metric-note" id="bias-strong-note">高于所选均线</span>
+          </article>
+          <article class="metric">
+            <span class="metric-label">最偏弱</span>
+            <strong class="metric-value" id="bias-weak-value">--</strong>
+            <span class="metric-note" id="bias-weak-note">低于所选均线</span>
+          </article>
+        </section>
+
+        <section class="workspace bias-workspace">
+          <article class="panel trend-panel bias-chart-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="panel-kicker">BIAS HISTORY</p>
+                <h2 id="bias-chart-heading">行业乖离率走势</h2>
+              </div>
+              <div class="chart-legend" id="bias-chart-legend" aria-label="乖离率图例"></div>
+            </div>
+            <p class="bias-chart-caption" id="bias-chart-caption">
+              行业乖离率与四条大盘指数对比，虚线为历史 20% / 80% 分位参考。
+            </p>
+            <div class="chart-wrap bias-chart-wrap" id="bias-chart-wrap">
+              <svg id="bias-chart" role="img" aria-label="行业与大盘指数乖离率历史走势" aria-describedby="bias-chart-desc">
+                <desc id="bias-chart-desc">所选行业和四条大盘指数相对所选均线的乖离率历史。</desc>
+              </svg>
+            </div>
+            <div class="chart-readout" id="bias-chart-tooltip" role="status" aria-live="polite">
+              移到曲线上查看行业和大盘指数的乖离率
+            </div>
+            <dl class="detail-stats bias-detail-stats">
+              <div>
+                <dt>当前乖离率</dt>
+                <dd id="bias-stat-current">--</dd>
+              </div>
+              <div>
+                <dt>历史分位</dt>
+                <dd id="bias-stat-percentile">--</dd>
+              </div>
+              <div>
+                <dt>指数 / 均线</dt>
+                <dd id="bias-stat-ma">--</dd>
+              </div>
+              <div>
+                <dt>位置判断</dt>
+                <dd id="bias-stat-zone">--</dd>
+              </div>
+            </dl>
+          </article>
+
+          <aside class="panel ranking-panel bias-ranking-panel">
+            <div class="panel-heading ranking-heading">
+              <div>
+                <p class="panel-kicker">BIAS RANKING</p>
+                <h2>当前乖离排行</h2>
+              </div>
+              <span class="sort-label" id="bias-ranking-label">MA20 · 日线</span>
+            </div>
+            <div class="ranking-labels" aria-hidden="true">
+              <span>行业 / 历史分位</span>
+              <span>乖离率</span>
+            </div>
+            <div id="bias-ranking-list" class="bias-ranking-list"></div>
+            <p class="ranking-caption">历史分位按本行业近三年的同一乖离率序列计算；点击行业切换左侧走势。</p>
+          </aside>
+        </section>
+      </div>
+
+      <div class="view-pane" id="flow-view" data-view-pane="flow" hidden>
+        <div id="flow-view-main"></div>
+        <section class="panel level2-flow-panel" id="level2-flow-panel" aria-labelledby="level2-flow-heading">
+          <div class="panel-heading level2-flow-heading">
+            <div>
+              <p class="panel-kicker">LEVEL 2 / STOCK FLOW</p>
+              <h2 id="level2-flow-heading">二级行业与个股资金温度</h2>
+            </div>
+            <div class="level2-flow-heading-meta">
+              <span id="level2-flow-time">选择二级行业后载入</span>
+              <button class="flow-refresh" id="level2-flow-refresh" type="button" disabled>刷新</button>
+            </div>
+          </div>
+          <div class="level2-flow-controls">
+            <label>
+              <span>申万一级行业</span>
+              <select id="level2-flow-parent-select" aria-label="选择申万一级行业"></select>
+            </label>
+            <label>
+              <span>申万二级行业</span>
+              <select id="level2-flow-industry-select" aria-label="选择申万二级行业"></select>
+            </label>
+          </div>
+          <p class="level2-flow-intro">
+            二级行业资金按申万成分股逐股汇总：主力净流入为成分股合计，主力占比为合计净流入除以合计成交额，量比和换手率为成交额加权值。数据来自东方财富个股资金快照，并非官方申万行业资金指标。
+          </p>
+          <div class="level2-flow-summary" id="level2-flow-summary" aria-live="polite">
+            <span><small>二级行业</small><strong>等待选择</strong></span>
+            <span><small>主力净流入</small><strong>--</strong></span>
+            <span><small>主力占比</small><strong>--</strong></span>
+            <span><small>成交额加权量比</small><strong>--</strong></span>
+          </div>
+          <div class="company-table-wrap level2-flow-table-wrap">
+            <table class="company-table level2-flow-table">
+              <thead>
+                <tr>
+                  <th scope="col">公司</th>
+                  <th scope="col">代码</th>
+                  <th scope="col" class="numeric">最新价</th>
+                  <th scope="col" class="numeric">当日</th>
+                  <th scope="col" class="numeric">主力净流入</th>
+                  <th scope="col" class="numeric">主力占比</th>
+                  <th scope="col" class="numeric">量比</th>
+                  <th scope="col" class="numeric">换手率</th>
+                </tr>
+              </thead>
+              <tbody id="level2-flow-stock-body">
+                <tr><td colspan="8" class="company-empty">请选择二级行业查看成分股资金流</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="level2-flow-footnote" id="level2-flow-footnote">
+            点击公司名称可进入公司研究；统计仅覆盖成功匹配资金数据的成分股。
+          </p>
+        </section>
+      </div>
+
+      <div class="view-pane" id="concept-view" data-view-pane="concept" hidden>
+        <div id="concept-view-main"></div>
+      </div>
+
+      <div class="view-pane" id="company-view" data-view-pane="company" hidden>
+        <div id="company-view-top"></div>
+        <section class="panel concept-heat-panel" id="concept-heat-panel" aria-labelledby="concept-heat-heading">
+          <div class="panel-heading concept-heat-heading">
+            <div>
+              <p class="panel-kicker">CONCEPT HEAT / 热点雷达</p>
+              <h2 id="concept-heat-heading">当前热点概念</h2>
+            </div>
+            <div class="concept-heat-meta">
+              <span id="concept-heat-time">热点数据载入中</span>
+              <button class="flow-refresh" id="concept-heat-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <p class="concept-heat-intro">
+            热点综合由基础热度60%、涨停事件25%和5分钟资金速度15%组成。资金速度衡量累计主力净流入最近5分钟的加快或减慢；涨停事件统计概念内涨停、连板和炸板质量。点击概念卡片可查看相关股票。
+          </p>
+          <div class="concept-heat-controls">
+            <div class="segmented" id="concept-heat-mode" role="group" aria-label="概念范围">
+              <button type="button" data-heat-mode="theme" class="is-active" aria-pressed="true">题材概念</button>
+              <button type="button" data-heat-mode="style" aria-pressed="false">市场风格</button>
+              <button type="button" data-heat-mode="all" aria-pressed="false">全部</button>
+            </div>
+            <div class="segmented" id="concept-heat-sort" role="group" aria-label="热点排序">
+              <button type="button" data-heat-sort="hotspotScore" class="is-active" aria-pressed="true">热点综合</button>
+              <button type="button" data-heat-sort="heatScore" aria-pressed="false">基础热度</button>
+              <button type="button" data-heat-sort="shortTermScore" aria-pressed="false">短线热度</button>
+              <button type="button" data-heat-sort="changePct" aria-pressed="false">涨幅</button>
+              <button type="button" data-heat-sort="return60d" aria-pressed="false">60日趋势</button>
+              <button type="button" data-heat-sort="return5d" aria-pressed="false">5日趋势</button>
+              <button type="button" data-heat-sort="mainNetRatio" aria-pressed="false">主力占比</button>
+              <button type="button" data-heat-sort="upRatio" aria-pressed="false">上涨占比</button>
+            </div>
+          </div>
+          <div class="concept-heat-lead" id="concept-heat-lead" aria-live="polite">
+            正在计算当前概念热度…
+          </div>
+          <div class="concept-heat-grid" id="concept-heat-grid"></div>
+          <p class="concept-heat-method" id="concept-heat-method">
+            热度是多个市场指标的相对分位组合，不代表未来收益。
+          </p>
+        </section>
+        <section class="panel concept-intraday-flow-panel" id="concept-intraday-flow-panel" aria-labelledby="concept-intraday-flow-heading">
+          <div class="panel-heading concept-intraday-flow-heading">
+            <div>
+              <p class="panel-kicker">INTRADAY FUND FLOW / 盘中资金流</p>
+              <h2 id="concept-intraday-flow-heading">概念分时累计主力净流入</h2>
+            </div>
+            <div class="concept-intraday-flow-meta">
+              <div class="segmented" id="concept-intraday-flow-mode" role="group" aria-label="资金流指标">
+                <button type="button" data-intraday-flow-mode="cumulative" class="is-active" aria-pressed="true">累计资金</button>
+                <button type="button" data-intraday-flow-mode="velocity" aria-pressed="false">资金速度</button>
+              </div>
+              <div class="segmented" id="concept-intraday-flow-scope" role="group" aria-label="资金流展示范围">
+                <button type="button" data-intraday-flow-scope="focus" class="is-active" aria-pressed="true">重点10条</button>
+                <button type="button" data-intraday-flow-scope="all" aria-pressed="false">全部概念</button>
+              </div>
+              <span id="concept-intraday-flow-time">资金曲线载入中</span>
+              <button class="flow-refresh" id="concept-intraday-flow-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <p class="concept-intraday-flow-intro">
+            累计资金模式显示从开盘起的主力净流入，单位为亿元；资金速度模式显示最近5分钟累计净流入的变化，单位为亿元/分钟。“重点10条”默认按当前指标展示前4、后3（累计资金即流入/流出，资金速度即加速/减速），并加入基础热度前3（去重后补足10条）；点击“全部概念”可查看全部，点击图例可单独隐藏或恢复曲线。
+          </p>
+          <div class="concept-intraday-flow-summary" id="concept-intraday-flow-summary" aria-live="polite">
+            正在获取分时资金曲线…
+          </div>
+          <div class="concept-intraday-flow-chart-wrap" id="concept-intraday-flow-chart-wrap">
+            <svg id="concept-intraday-flow-chart" role="img" aria-label="概念板块盘中累计主力净流入曲线"></svg>
+          </div>
+          <div class="chart-readout concept-intraday-flow-readout" id="concept-intraday-flow-readout">
+            移到曲线上查看各概念同一时刻的累计资金流
+          </div>
+          <div class="concept-intraday-flow-legend" id="concept-intraday-flow-legend" aria-label="概念资金流图例"></div>
+          <p class="concept-intraday-flow-method">
+            资金速度=最新累计净流入减去5分钟前累计净流入后除以5；加速度=当前5分钟速度减去前一个5分钟速度。主力净流入按成交单大小分类估算，不代表真实机构新增资金。
+          </p>
+        </section>
+        <section class="panel event-theme-panel" id="event-theme-panel" aria-labelledby="event-theme-heading">
+          <div class="panel-heading event-theme-heading">
+            <div>
+              <p class="panel-kicker">EVENT THEMES / 事件主题层</p>
+              <h2 id="event-theme-heading">涨停原因动态聚合</h2>
+            </div>
+            <div class="event-theme-meta">
+              <span id="event-theme-time">事件主题载入中</span>
+              <button class="flow-refresh" id="event-theme-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <p class="event-theme-intro">
+            把最近5个交易日涨停股票的“涨停原因”拆成动态标签，再按股票覆盖数、连板高度、封单、换手和复现次数聚合。卡片中间的柱子从左到右对应最近5个交易日，柱上数字是当天涨停股数，柱下是日期；点击“查看全部”可以展开该事件涉及的全部涨停股。它不是固定概念名单，会识别“羊字辈”“AI影视”等临时市场叙事，也可能出现相近标签并存。
+          </p>
+          <div class="event-theme-summary" id="event-theme-summary" aria-live="polite">
+            正在整理最近交易日的涨停原因…
+          </div>
+          <div class="event-theme-grid" id="event-theme-grid"></div>
+          <p class="event-theme-method" id="event-theme-method">
+            事件主题来自第三方涨停原因数据，只用于观察短线事件驱动，不代表主题能够持续。
+          </p>
+        </section>
+        <section class="panel concept-rotation-panel" id="concept-rotation-panel" aria-labelledby="concept-rotation-heading">
+          <div class="panel-heading concept-rotation-heading">
+            <div>
+              <p class="panel-kicker">CONCEPT ROTATION</p>
+              <h2 id="concept-rotation-heading">概念轮动与持续性</h2>
+            </div>
+            <div class="concept-rotation-meta">
+              <div class="segmented" id="concept-rotation-mode" role="group" aria-label="概念轮动周期">
+                <button type="button" data-concept-rotation-mode="week" class="is-active" aria-pressed="true">近12周</button>
+                <button type="button" data-concept-rotation-mode="day" aria-pressed="false">近20日</button>
+              </div>
+              <span id="concept-rotation-time">概念轮动载入中</span>
+              <button class="flow-refresh" id="concept-rotation-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <p class="concept-rotation-intro" id="concept-rotation-intro">
+            从当前高热和成交活跃的题材概念中选样，展示近期逐周涨跌；名称旁显示持续性证据分。点击概念名称可直接查看相关股票。
+          </p>
+          <div class="heatmap-legend concept-rotation-legend" aria-label="概念涨跌颜色图例">
+            <span id="concept-rotation-loss-label">周跌幅</span>
+            <i class="legend-swatch" style="--alpha: 0.72"></i>
+            <i class="legend-swatch" style="--alpha: 0.42"></i>
+            <i class="legend-swatch neutral"></i>
+            <i class="legend-swatch up" style="--alpha: 0.42"></i>
+            <i class="legend-swatch up" style="--alpha: 0.72"></i>
+            <span id="concept-rotation-gain-label">周涨幅</span>
+          </div>
+          <div class="heatmap-shell concept-rotation-shell">
+            <div class="heatmap is-weekly" id="concept-rotation-grid" role="grid" aria-label="热点概念近期轮动与持续性热力图">
+              <p class="flow-empty">概念轮动数据载入中…</p>
+            </div>
+          </div>
+          <p class="concept-rotation-method" id="concept-rotation-method">
+            热力图用于观察强弱迁移；持续性评分不是上涨概率，不代表未来收益。
+          </p>
+        </section>
+        <section class="panel concept-screener-panel" id="concept-screener-panel" aria-labelledby="concept-screener-heading">
+          <div class="panel-heading concept-screener-heading">
+            <div>
+              <p class="panel-kicker">CONCEPT TO STOCKS</p>
+              <h2 id="concept-screener-heading">概念反查股票</h2>
+            </div>
+            <span class="concept-screener-time" id="concept-screener-time">输入概念后查询</span>
+          </div>
+          <form class="concept-search-form" id="concept-search-form">
+            <label for="concept-search-input">概念名称</label>
+            <div>
+              <input
+                id="concept-search-input"
+                type="search"
+                placeholder="例如：物理AI、人形机器人、低空经济"
+                autocomplete="off"
+              >
+              <button type="submit" id="concept-search-submit">查找相关股票</button>
+            </div>
+          </form>
+          <div class="concept-presets" id="concept-presets" aria-label="概念快捷搜索">
+            <button type="button" data-concept-preset="物理AI">物理AI</button>
+            <button type="button" data-concept-preset="AI短剧">AI短剧</button>
+            <button type="button" data-concept-preset="传媒">传媒</button>
+            <button type="button" data-concept-preset="人形机器人">人形机器人</button>
+            <button type="button" data-concept-preset="低空经济">低空经济</button>
+            <button type="button" data-concept-preset="固态电池">固态电池</button>
+          </div>
+          <p class="concept-screener-intro">
+            先匹配东方财富概念板块；没有同名板块时，会按“物理AI / 具身智能”等常见关联词匹配相近概念，并明确标注。成分股为该概念的公开板块名单，不代表每家公司相关收入占比。
+          </p>
+          <div class="concept-match-summary" id="concept-match-summary" aria-live="polite">
+            <span>尚未查询概念</span>
+          </div>
+          <div class="concept-market-note" id="concept-market-note"></div>
+          <div class="concept-role-summary" id="concept-role-summary" hidden></div>
+          <div class="company-table-wrap concept-stock-table-wrap">
+            <table class="company-table concept-stock-table">
+              <thead>
+                <tr>
+                  <th scope="col">公司</th>
+                  <th scope="col">代码</th>
+                  <th scope="col">角色</th>
+                  <th scope="col" class="numeric">最新价</th>
+                  <th scope="col" class="numeric">当日</th>
+                  <th scope="col" class="numeric">主力净流入</th>
+                  <th scope="col" class="numeric">主力占比</th>
+                  <th scope="col" class="numeric">量比</th>
+                  <th scope="col">匹配概念</th>
+                </tr>
+              </thead>
+              <tbody id="concept-stock-body">
+                <tr><td colspan="9" class="company-empty">输入概念后查看相关股票</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p class="concept-stock-footnote">
+            龙头、中军为严格候选模型：区分主板、创业板、科创板涨停阈值，并加入首次封板、连板、炸板、近5日板块内领导稳定性和上涨共振。角色不是官方固定标签；再次点击“查找相关股票”会强制刷新。
+          </p>
+        </section>
+        <section class="panel company-view-help" id="company-view-help">
+          <p class="panel-kicker">COMPANY RESEARCH</p>
+          <h2>从公司反查行业</h2>
+          <p>输入公司名称或代码后，系统会定位申万一级、二级行业，并展开短线指标、行业轮动、基本面与概念关联。也可以从“行业趋势”中点击“成分公司”进入这里。</p>
+        </section>
+        <div id="company-view-main"></div>
+      </div>
+
+      <footer class="page-footer">
+        <div>
+          <strong>数据口径</strong>
+          <span id="data-source">乐咕乐股申万行业指数；沪深300来自东方财富</span>
+        </div>
+        <div>
+          <span>趋势状态由价格与 13/26 周均线结构判定，仅用于观察市场，不构成投资建议。</span>
+          <span id="updated-at"></span>
+        </div>
+      </footer>
+    </main>
+  </div>
+
+  <div class="load-error" id="load-error" role="alert" hidden>
+    行业数据没有正确载入，请确认 <code>data.js</code> 与页面位于同一目录。
+  </div>
+  <script src="data.js"></script>
+  <script src="bootstrap.js?v=20261109-rankflow3"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+__pycache__/
+*.py[cod]
+*.log
+*.zip
+.venv/
+venv/
+.DS_Store
+Thumbs.db
+/0]
+/sw-industry-trends-*-stage-*/
+
+# Live market-data caches are refreshed by the local server.
+/companies_cache/
+/company_info_cache/
+/concept_stock_cache/
+/level2_cache/
+/level2_flow_cache/
+/concept_heat_cache.json
+/concept_hotspot_cache.json
+/concept_intraday_flow_cache.json
+/concept_rotation_cache.json
+/event_theme_cache.json
+/industry_flow_cache.json
+/industry_fund_history_cache.json

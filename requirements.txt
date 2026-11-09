@@ -1,0 +1,2 @@
+# No third-party Python packages are required.
+# The bundled requests.py provides the small HTTP subset used by data fetchers.
