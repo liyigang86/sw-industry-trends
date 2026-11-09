@@ -3406,13 +3406,70 @@ button.company-industry-node:hover {
   margin-top: 4px;
 }
 
-.company-catalyst-tags b {
+.company-catalyst-tags button {
   padding: 3px 6px;
+  border: 0;
   border-radius: 999px;
   color: var(--warning);
   background: color-mix(in srgb, var(--warning) 10%, transparent);
+  cursor: pointer;
+  font: inherit;
   font-size: 8px;
   font-weight: 600;
+}
+
+.company-catalyst-tags button:hover,
+.company-catalyst-tags button.is-active {
+  color: var(--panel);
+  background: var(--warning);
+}
+
+.company-catalyst-evidence {
+  margin-top: 9px;
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+}
+
+.company-catalyst-evidence-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.company-catalyst-evidence-head strong {
+  color: var(--text);
+  font-size: 9px;
+}
+
+.company-catalyst-evidence-head span {
+  color: var(--faint);
+  font-size: 7px;
+}
+
+.company-catalyst-evidence-head i {
+  padding: 2px 5px;
+  border-radius: 999px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  font-size: 7px;
+  font-style: normal;
+}
+
+.company-catalyst-evidence p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.6;
+}
+
+.company-catalyst-evidence small {
+  display: block;
+  margin-top: 5px;
+  color: var(--faint);
+  font-size: 7px;
 }
 
 .company-catalyst > p {

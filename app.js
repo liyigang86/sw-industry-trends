@@ -5729,6 +5729,67 @@
         .split("+")
         .map((item) => item.trim())
         .filter(Boolean);
+      const normalizeCatalyst = (value) =>
+        String(value || "")
+          .replaceAll("概念", "")
+          .replaceAll("产业", "")
+          .replace(/\s+/g, "")
+          .toLowerCase();
+      const catalystAliases = {
+        太空算力: ["算力概念", "商业航天"],
+        算力: ["算力概念"],
+      };
+      const catalystEvidence = reasonParts.map((reason) => {
+        const aliases = catalystAliases[reason] || [
+          reason,
+          `${reason}概念`,
+        ];
+        const concept = aliases
+          .map((alias) => {
+            const normalizedAlias = normalizeCatalyst(alias);
+            return (payload.concepts || []).find((item) => {
+              const normalizedName = normalizeCatalyst(item.name);
+              return (
+                normalizedName.includes(normalizedAlias) ||
+                normalizedAlias.includes(normalizedName)
+              );
+            });
+          })
+          .find(Boolean);
+        if (concept) {
+          return {
+            label: reason,
+            title: concept.name,
+            source: `${concept.relevanceLabel || "概念关联"}${concept.evidenceDate ? ` · 依据 ${concept.evidenceDate}` : ""}`,
+            detail:
+              concept.reason || `${concept.name}暂无详细关联说明。`,
+            stale: Boolean(concept.stale),
+          };
+        }
+        const normalizedReason = normalizeCatalyst(reason);
+        const highlight = (payload.highlights || []).find((item) =>
+          normalizeCatalyst(`${item.title || ""}${item.content || ""}`).includes(
+            normalizedReason,
+          ),
+        );
+        if (highlight) {
+          return {
+            label: reason,
+            title: highlight.title || "主营业务资料",
+            source: highlight.category || "公司业务资料",
+            detail: highlight.content || highlight.title || reason,
+            stale: false,
+          };
+        }
+        return {
+          label: reason,
+          title: "交易叙事",
+          source: "涨停池原因",
+          detail:
+            "该表述来自最近交易日涨停原因。公司资料中暂未找到与之直接对应的主营产品或公告证据，应按交易题材而非核心业务理解。",
+          stale: false,
+        };
+      });
       const eventDate =
         primary.stock.lastLimitTime || primary.stock.firstLimitTime
           ? new Date(
@@ -5752,10 +5813,10 @@
           <span>
             <small>当日涨停原因</small>
             <div class="company-catalyst-tags">
-              ${reasonParts
+              ${catalystEvidence
                 .map(
-                  (reason) =>
-                    `<b>${escapeHTML(reason)}</b>`,
+                  (evidence, index) =>
+                    `<button type="button" class="${index === 0 ? "is-active" : ""}" data-catalyst-evidence="${index}">${escapeHTML(evidence.label)}</button>`,
                 )
                 .join("")}
             </div>
@@ -5765,10 +5826,37 @@
             <strong>${escapeHTML(primary.stock.boardLabel || "涨停")} · ${escapeHTML(primary.stock.limitUpType || "涨停")}</strong>
           </span>
         </div>
+        <div class="company-catalyst-evidence" aria-live="polite"></div>
         <p>
           涨停原因来自最近交易日涨停池，是价格异动的交易催化；“所属行业”和“核心业务相关度”仍用于基本面分类，两者不能混用。
         </p>
       `;
+      const evidencePanel = catalystSection.querySelector(
+        ".company-catalyst-evidence",
+      );
+      const evidenceButtons = [
+        ...catalystSection.querySelectorAll("button[data-catalyst-evidence]"),
+      ];
+      const showEvidence = (index) => {
+        const evidence = catalystEvidence[index];
+        if (!evidence) return;
+        evidenceButtons.forEach((button, buttonIndex) => {
+          button.classList.toggle("is-active", buttonIndex === index);
+        });
+        evidencePanel.innerHTML = `
+          <div class="company-catalyst-evidence-head">
+            <strong>${escapeHTML(evidence.title)}</strong>
+            <span>${escapeHTML(evidence.source)}</span>
+            ${evidence.stale ? "<i>原依据较早</i>" : ""}
+          </div>
+          <p>${escapeHTML(evidence.detail)}</p>
+          <small>来源：涨停原因与公司公告/业务资料匹配，仅用于解释交易催化。</small>
+        `;
+      };
+      evidenceButtons.forEach((button, index) => {
+        button.addEventListener("click", () => showEvidence(index));
+      });
+      showEvidence(0);
       fragment.append(catalystSection);
     }
 
