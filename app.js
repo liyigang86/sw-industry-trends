@@ -146,6 +146,9 @@
     industryFlowSort: "mainNetInflow",
     industryFlowRefreshTimer: null,
     industryFlowLoading: false,
+    marketPulsePayload: null,
+    marketPulseLoading: false,
+    marketPulseRequestId: 0,
     level2FlowParentCode: null,
     level2FlowIndustryCode: null,
     level2FlowPayload: null,
@@ -315,6 +318,18 @@
     industryFlowSummary: document.getElementById("industry-flow-summary"),
     industryFlowControls: document.getElementById("industry-flow-controls"),
     industryFlowGrid: document.getElementById("industry-flow-grid"),
+    marketPulsePanel: document.getElementById("market-pulse-panel"),
+    marketPulseTime: document.getElementById("market-pulse-time"),
+    marketPulseRefresh: document.getElementById("market-pulse-refresh"),
+    marketBreadthSummary: document.getElementById("market-breadth-summary"),
+    marketBreadthChart: document.getElementById("market-breadth-chart"),
+    marketBreadthTotals: document.getElementById("market-breadth-totals"),
+    marketVolumeState: document.getElementById("market-volume-state"),
+    marketVolumeActual: document.getElementById("market-volume-actual"),
+    marketVolumePredicted: document.getElementById("market-volume-predicted"),
+    marketVolumeNote: document.getElementById("market-volume-note"),
+    marketVolumeRange: document.getElementById("market-volume-range"),
+    marketVolumeMethod: document.getElementById("market-volume-method"),
     level2FlowPanel: document.getElementById("level2-flow-panel"),
     level2FlowTime: document.getElementById("level2-flow-time"),
     level2FlowRefresh: document.getElementById("level2-flow-refresh"),
@@ -2672,6 +2687,176 @@
     );
   }
 
+  function renderMarketPulse(payload) {
+    state.marketPulsePayload = payload;
+    const market = payload?.market || {};
+    const breadth = payload?.breadth || {};
+    const buckets = Array.isArray(breadth.buckets) ? breadth.buckets : [];
+    elements.marketPulseTime.textContent = market.isFinal && payload?.sourceDate
+      ? `收盘 ${formatDate(payload.sourceDate)}`
+      : payload?.quoteTime
+        ? `市场快照 ${formatFlowTime(payload.quoteTime)}`
+        : "市场快照";
+    if (!buckets.length) {
+      elements.marketBreadthChart.innerHTML =
+        '<p class="flow-empty">涨跌分布暂时不可用。</p>';
+      elements.marketBreadthTotals.replaceChildren();
+      return;
+    }
+
+    const maxCount = Math.max(1, ...buckets.map((item) => item.count || 0));
+    elements.marketBreadthSummary.textContent =
+      `实际涨跌停 ${breadth.limitUpCount || 0}:${breadth.limitDownCount || 0}`;
+    elements.marketBreadthChart.innerHTML = buckets
+      .map((item) => {
+        const height = Math.max(2.5, ((item.count || 0) / maxCount) * 100);
+        const tone = ["up-strong", "up", "up-soft"].includes(item.tone)
+          ? item.tone.includes("soft")
+            ? "up-soft"
+            : "up"
+          : ["down-strong", "down", "down-soft"].includes(item.tone)
+            ? item.tone.includes("soft")
+              ? "down-soft"
+              : "down"
+            : "flat";
+        return `
+          <div class="market-breadth-column ${tone}" title="${escapeHTML(item.label)}：${Number(item.count || 0)}家">
+            <span class="market-breadth-count">${Number(item.count || 0)}</span>
+            <span class="market-breadth-bar-track">
+              <i class="market-breadth-bar" style="height:${height.toFixed(1)}%"></i>
+            </span>
+            <span class="market-breadth-label">${escapeHTML(item.label)}</span>
+          </div>
+        `;
+      })
+      .join("");
+
+    const total = Math.max(
+      1,
+      Number(breadth.upCount || 0) +
+        Number(breadth.flatCount || 0) +
+        Number(breadth.downCount || 0),
+    );
+    const upWidth = (Number(breadth.upCount || 0) / total) * 100;
+    const flatWidth = (Number(breadth.flatCount || 0) / total) * 100;
+    const downWidth = (Number(breadth.downCount || 0) / total) * 100;
+    elements.marketBreadthTotals.innerHTML = `
+      <div class="market-breadth-ratio" aria-label="上涨${breadth.upCount || 0}家，平盘${breadth.flatCount || 0}家，下跌${breadth.downCount || 0}家">
+        <span class="up" style="width:${upWidth.toFixed(2)}%"></span>
+        <span class="flat" style="width:${flatWidth.toFixed(2)}%"></span>
+        <span class="down" style="width:${downWidth.toFixed(2)}%"></span>
+      </div>
+      <div class="market-breadth-legend">
+        <span class="up">涨 ${Number(breadth.upCount || 0).toLocaleString()} 家</span>
+        <span class="flat">平 ${Number(breadth.flatCount || 0).toLocaleString()} 家</span>
+        <span class="down">跌 ${Number(breadth.downCount || 0).toLocaleString()} 家</span>
+      </div>
+    `;
+
+    const numeric = (value) =>
+      value === null || value === undefined ? Number.NaN : Number(value);
+    const actual = numeric(market.amount);
+    const predicted = numeric(market.predictedAmount);
+    const previous = numeric(market.previousAmount);
+    const changeAmount = numeric(market.changeAmount);
+    const changePct = numeric(market.changePct);
+    elements.marketVolumeState.textContent = market.isFinal
+      ? "收盘实际"
+      : "盘中估算";
+    elements.marketVolumeActual.textContent = Number.isFinite(actual)
+      ? formatYi(actual, 1, false)
+      : "—";
+    elements.marketVolumePredicted.textContent = Number.isFinite(predicted)
+      ? formatYi(predicted, 1, false)
+      : "—";
+    const isShrink = Number.isFinite(changeAmount) && changeAmount < 0;
+    const directionText = isShrink ? "缩量" : "放量";
+    elements.marketVolumeNote.className =
+      `market-volume-note ${isShrink ? "is-shrink" : changeAmount > 0 ? "is-expand" : ""}`;
+    if (
+      Number.isFinite(previous) &&
+      Number.isFinite(changeAmount) &&
+      Number.isFinite(changePct)
+    ) {
+      elements.marketVolumeNote.innerHTML = `
+        较昨日 ${formatYi(previous, 1, false)}
+        <strong>${formatRate(changePct * 100, 2, true)}</strong>
+        · ${directionText}${formatYi(Math.abs(changeAmount), 1, false)}
+      `;
+    } else {
+      elements.marketVolumeNote.textContent = "昨日量能暂不可用";
+    }
+
+    const low = numeric(market.predictedLow);
+    const high = numeric(market.predictedHigh);
+    if (
+      Number.isFinite(low) &&
+      Number.isFinite(high) &&
+      Number.isFinite(predicted) &&
+      high > low
+    ) {
+      const scaleValues = [low, high, predicted];
+      if (Number.isFinite(previous)) scaleValues.push(previous);
+      const scaleMin = Math.min(...scaleValues);
+      const scaleMax = Math.max(...scaleValues);
+      const scaleRange = Math.max(1, scaleMax - scaleMin);
+      const position = (value) =>
+        ((value - scaleMin) / scaleRange) * 100;
+      elements.marketVolumeRange.innerHTML = `
+        <span class="market-volume-range-track"></span>
+        <span class="market-volume-range-band" style="left:${position(low).toFixed(1)}%;width:${Math.max(1, position(high) - position(low)).toFixed(1)}%"></span>
+        <span class="market-volume-range-marker" style="left:${position(predicted).toFixed(1)}%"></span>
+        <span class="market-volume-range-label" style="left:${position(low).toFixed(1)}%">${formatYi(low, 0, false)}</span>
+        <span class="market-volume-range-label" style="left:${position(high).toFixed(1)}%">${formatYi(high, 0, false)}</span>
+      `;
+    } else {
+      elements.marketVolumeRange.replaceChildren();
+    }
+    const completion = numeric(market.historicalCompletion);
+    const completionText = Number.isFinite(completion)
+      ? `历史同时间完成度 ${(completion * 100).toFixed(1)}%，样本 ${market.historicalDays || 0} 个交易日。`
+      : "";
+    elements.marketVolumeMethod.textContent =
+      `${completionText}${payload.forecastMethod || ""}`;
+  }
+
+  async function loadMarketPulse(force = false) {
+    if (state.marketPulseLoading) return;
+    if (standalone?.marketPulse) {
+      renderMarketPulse(standalone.marketPulse);
+      return;
+    }
+    state.marketPulseRequestId += 1;
+    const requestId = state.marketPulseRequestId;
+    state.marketPulseLoading = true;
+    elements.marketPulseRefresh.disabled = true;
+    elements.marketPulseTime.textContent = force
+      ? "正在刷新市场脉搏…"
+      : "市场快照载入中…";
+    try {
+      const response = await fetch(
+        `/api/market-pulse${force ? "?refresh=1" : ""}`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json();
+      if (requestId === state.marketPulseRequestId) {
+        renderMarketPulse(payload);
+      }
+    } catch {
+      elements.marketPulseTime.textContent = "市场快照暂时不可用";
+      if (!state.marketPulsePayload) {
+        elements.marketBreadthChart.innerHTML =
+          '<p class="flow-empty">涨跌分布暂时不可用，请稍后刷新。</p>';
+      }
+    } finally {
+      if (requestId === state.marketPulseRequestId) {
+        state.marketPulseLoading = false;
+        elements.marketPulseRefresh.disabled = false;
+      }
+    }
+  }
+
   function renderIndustryFlow() {
     const items = state.industryFlow;
     if (!items.length) {
@@ -4909,6 +5094,33 @@
     });
   }
 
+  function setupMarketPulse() {
+    elements.marketPulseRefresh.addEventListener("click", () =>
+      loadMarketPulse(true),
+    );
+    if (state.activeView === "flow") loadMarketPulse();
+    window.setInterval(() => {
+      if (
+        state.activeView === "flow" &&
+        !document.hidden &&
+        !standalone &&
+        isChinaTradingWindow()
+      ) {
+        loadMarketPulse();
+      }
+    }, 60_000);
+    document.addEventListener("visibilitychange", () => {
+      if (
+        state.activeView === "flow" &&
+        !document.hidden &&
+        !standalone &&
+        isChinaTradingWindow()
+      ) {
+        loadMarketPulse();
+      }
+    });
+  }
+
   function setupIndustryFlow() {
     elements.industryFlowControls.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-flow-sort]");
@@ -6237,6 +6449,7 @@
     }
     if (view === "flow") {
       requestAnimationFrame(() => {
+        loadMarketPulse();
         if (state.level2FlowIndustryCode) loadLevel2Flow();
       });
     }
@@ -6453,6 +6666,7 @@
   renderBiasMaOptions();
   setupViewTabs();
   setupControls();
+  setupMarketPulse();
   setupIndustryFlow();
   setupLevel2Flow();
   setupConceptHeat();

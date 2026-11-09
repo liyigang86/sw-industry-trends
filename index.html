@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="申万一级行业趋势、相对强弱与近期轮动热力图">
   <title>申万一级行业趋势</title>
-    <link rel="stylesheet" href="styles.css?v=20261109-rankflow3">
+    <link rel="stylesheet" href="styles.css?v=20261109-marketpulse2">
   <script>
     (() => {
       const saved = localStorage.getItem("sw-trend-theme");
@@ -478,6 +478,62 @@
       </div>
 
       <div class="view-pane" id="flow-view" data-view-pane="flow" hidden>
+        <section class="panel market-pulse-panel" id="market-pulse-panel" aria-labelledby="market-pulse-heading">
+          <div class="panel-heading market-pulse-heading">
+            <div>
+              <p class="panel-kicker">MARKET PULSE / 全市场温度</p>
+              <h2 id="market-pulse-heading">涨跌分布与全天量能预估</h2>
+            </div>
+            <div class="market-pulse-meta">
+              <span id="market-pulse-time">市场快照载入中</span>
+              <button class="flow-refresh" id="market-pulse-refresh" type="button">刷新</button>
+            </div>
+          </div>
+          <p class="market-pulse-intro">
+            涨跌分布覆盖沪深京 A 股并剔除 ST；全天量能按最近 20 个交易日同一时刻的成交完成度估算，不使用简单线性外推。
+          </p>
+          <div class="market-pulse-grid">
+            <article class="market-breadth-card">
+              <div class="market-card-heading">
+                <div>
+                  <span class="market-card-kicker">MARKET BREADTH</span>
+                  <h3>实际涨跌分布</h3>
+                </div>
+                <span id="market-breadth-summary">涨跌停 --:--</span>
+              </div>
+              <div class="market-breadth-chart" id="market-breadth-chart" aria-live="polite">
+                正在统计全市场个股涨跌…
+              </div>
+              <div class="market-breadth-totals" id="market-breadth-totals"></div>
+            </article>
+            <article class="market-volume-card">
+              <div class="market-card-heading">
+                <div>
+                  <span class="market-card-kicker">TURNOVER FORECAST</span>
+                  <h3>沪深京量能</h3>
+                </div>
+                <span id="market-volume-state">盘中估算</span>
+              </div>
+              <div class="market-volume-main">
+                <span>
+                  <small>实际量能</small>
+                  <strong id="market-volume-actual">--</strong>
+                </span>
+                <span>
+                  <small>今日预测量能</small>
+                  <strong id="market-volume-predicted">--</strong>
+                </span>
+              </div>
+              <div class="market-volume-note" id="market-volume-note">
+                正在读取历史同时间成交完成度…
+              </div>
+              <div class="market-volume-range" id="market-volume-range"></div>
+              <p class="market-volume-method" id="market-volume-method">
+                预测量能是区间估算，越接近收盘误差越小。
+              </p>
+            </article>
+          </div>
+        </section>
         <div id="flow-view-main"></div>
         <section class="panel level2-flow-panel" id="level2-flow-panel" aria-labelledby="level2-flow-heading">
           <div class="panel-heading level2-flow-heading">
@@ -758,6 +814,6 @@
     行业数据没有正确载入，请确认 <code>data.js</code> 与页面位于同一目录。
   </div>
   <script src="data.js"></script>
-  <script src="bootstrap.js?v=20261109-rankflow3"></script>
+  <script src="bootstrap.js?v=20261109-marketpulse2"></script>
 </body>
 </html>

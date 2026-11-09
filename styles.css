@@ -1513,6 +1513,311 @@ body[data-active-view="concept"] .controls {
   white-space: nowrap;
 }
 
+.market-pulse-panel {
+  margin-top: 20px;
+  padding: 22px 24px 20px;
+}
+
+.market-pulse-heading {
+  align-items: end;
+}
+
+.market-pulse-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--faint);
+  font-size: 9px;
+}
+
+.market-pulse-intro {
+  max-width: 980px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.65;
+}
+
+.market-pulse-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(310px, 0.8fr);
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.market-breadth-card,
+.market-volume-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: 14px;
+  background:
+    linear-gradient(145deg, rgba(var(--accent-rgb), 0.035), transparent 54%),
+    var(--panel-soft);
+}
+
+.market-card-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.market-card-heading h3 {
+  margin: 3px 0 0;
+  font-size: 14px;
+  font-weight: 620;
+}
+
+.market-card-heading > span {
+  padding: 5px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--muted);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.market-card-kicker {
+  color: var(--accent);
+  font-family: "Avenir Next", "DIN Alternate", "Bahnschrift", sans-serif;
+  font-size: 7px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+}
+
+.market-breadth-chart {
+  display: grid;
+  grid-template-columns: repeat(11, minmax(0, 1fr));
+  align-items: end;
+  gap: 5px;
+  min-height: 205px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.market-breadth-column {
+  display: grid;
+  grid-template-rows: 17px minmax(82px, 1fr) 17px;
+  align-items: end;
+  gap: 4px;
+  min-width: 0;
+  text-align: center;
+}
+
+.market-breadth-count {
+  align-self: end;
+  overflow: hidden;
+  color: var(--muted);
+  font-family: "Avenir Next", "DIN Alternate", "Bahnschrift", sans-serif;
+  font-size: 9px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-breadth-bar-track {
+  display: flex;
+  align-items: end;
+  height: 100%;
+  min-height: 82px;
+}
+
+.market-breadth-bar {
+  width: 100%;
+  min-height: 3px;
+  border-radius: 4px 4px 1px 1px;
+  background: var(--muted);
+  transition: height 240ms ease;
+}
+
+.market-breadth-column.up .market-breadth-bar {
+  background: var(--up);
+}
+
+.market-breadth-column.up .market-breadth-count {
+  color: var(--up);
+}
+
+.market-breadth-column.up-soft .market-breadth-bar {
+  background: color-mix(in srgb, var(--up) 68%, var(--panel));
+}
+
+.market-breadth-column.down .market-breadth-bar {
+  background: var(--down);
+}
+
+.market-breadth-column.down .market-breadth-count {
+  color: var(--down);
+}
+
+.market-breadth-column.down-soft .market-breadth-bar {
+  background: color-mix(in srgb, var(--down) 68%, var(--panel));
+}
+
+.market-breadth-column.flat .market-breadth-bar {
+  background: var(--faint);
+}
+
+.market-breadth-label {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 7px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-breadth-totals {
+  margin-top: 12px;
+}
+
+.market-breadth-ratio {
+  display: flex;
+  height: 10px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--line-soft);
+}
+
+.market-breadth-ratio span {
+  display: block;
+  min-width: 2px;
+  height: 100%;
+}
+
+.market-breadth-ratio .up {
+  background: var(--up);
+}
+
+.market-breadth-ratio .flat {
+  background: var(--faint);
+}
+
+.market-breadth-ratio .down {
+  background: var(--down);
+}
+
+.market-breadth-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 7px;
+  font-size: 9px;
+}
+
+.market-breadth-legend .up {
+  color: var(--up);
+}
+
+.market-breadth-legend .flat {
+  color: var(--faint);
+}
+
+.market-breadth-legend .down {
+  color: var(--down);
+}
+
+.market-volume-main {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.market-volume-main > span {
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  background: color-mix(in srgb, var(--text) 2.2%, transparent);
+}
+
+.market-volume-main small {
+  display: block;
+  color: var(--faint);
+  font-size: 8px;
+}
+
+.market-volume-main strong {
+  display: block;
+  margin-top: 5px;
+  overflow: hidden;
+  font-family: "Avenir Next", "DIN Alternate", "Bahnschrift", sans-serif;
+  font-size: clamp(21px, 2vw, 29px);
+  font-weight: 650;
+  letter-spacing: -0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.market-volume-note {
+  margin-top: 13px;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.market-volume-note strong {
+  color: var(--text);
+}
+
+.market-volume-note.is-shrink strong {
+  color: var(--down);
+}
+
+.market-volume-note.is-expand strong {
+  color: var(--up);
+}
+
+.market-volume-range {
+  position: relative;
+  height: 36px;
+  margin-top: 17px;
+}
+
+.market-volume-range-track {
+  position: absolute;
+  inset: 12px 0 auto;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--line-soft);
+}
+
+.market-volume-range-band {
+  position: absolute;
+  top: 12px;
+  height: 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 38%, var(--panel));
+}
+
+.market-volume-range-marker {
+  position: absolute;
+  top: 7px;
+  width: 2px;
+  height: 17px;
+  border-radius: 2px;
+  background: var(--accent-strong);
+}
+
+.market-volume-range-label {
+  position: absolute;
+  top: 24px;
+  color: var(--faint);
+  font-size: 7px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.market-volume-method {
+  margin: 2px 0 0;
+  color: var(--faint);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
 .flow-panel {
   margin-top: 20px;
   padding: 22px 24px 18px;
@@ -4009,6 +4314,10 @@ button.company-industry-node:hover {
     grid-template-columns: 1fr;
   }
 
+  .market-pulse-grid {
+    grid-template-columns: 1fr;
+  }
+
   .flow-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -4121,6 +4430,38 @@ button.company-industry-node:hover {
   .concept-rotation-panel,
   .concept-screener-panel {
     padding: 18px 16px 16px;
+  }
+
+  .market-pulse-panel {
+    padding: 18px 14px 16px;
+  }
+
+  .market-pulse-heading {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .market-pulse-meta {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .market-breadth-card,
+  .market-volume-card {
+    padding: 13px 10px;
+  }
+
+  .market-breadth-chart {
+    gap: 2px;
+  }
+
+  .market-breadth-label {
+    font-size: 6px;
+  }
+
+  .market-volume-main {
+    grid-template-columns: 1fr;
   }
 
   .concept-heat-heading {

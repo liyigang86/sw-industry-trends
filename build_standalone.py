@@ -64,6 +64,7 @@ def main() -> None:
         ),
         "eventThemes": read_json(ROOT / "event_theme_cache.json"),
         "conceptRotation": read_json(ROOT / "concept_rotation_cache.json"),
+        "marketPulse": read_json(ROOT / "market_pulse_cache.json"),
         "companies": collect_cache(ROOT / "companies_cache"),
         "companyInfo": company_info,
         "industryFlow": read_json(ROOT / "industry_flow_cache.json"),
@@ -73,12 +74,12 @@ def main() -> None:
     }
 
     index = index.replace(
-        '    <link rel="stylesheet" href="styles.css?v=20261109-rankflow3">',
+        '    <link rel="stylesheet" href="styles.css?v=20261109-marketpulse2">',
         f"    <style>\n{styles}\n    </style>",
     )
     index = index.replace(
         "  <script src=\"data.js\"></script>\n"
-        "  <script src=\"bootstrap.js?v=20261109-rankflow3\"></script>",
+        "  <script src=\"bootstrap.js?v=20261109-marketpulse2\"></script>",
         "  <script>\n"
         f"    window.SW_TREND_DATA = {script_json(data)};\n"
         f"    window.SW_STANDALONE = {script_json(standalone)};\n"

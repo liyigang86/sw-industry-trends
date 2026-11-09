@@ -8,7 +8,7 @@
 
   const appLoaded = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "app.js?v=20261109-rankflow3";
+    script.src = "app.js?v=20261109-marketpulse2";
     script.onload = resolve;
     script.onerror = reject;
     document.body.append(script);

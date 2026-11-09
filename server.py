@@ -24,6 +24,7 @@ FETCH_COMPANIES_SCRIPT = ROOT / "fetch_industry_companies.py"
 FETCH_COMPANY_INFO_SCRIPT = ROOT / "fetch_company_info.py"
 FETCH_COMPANY_DIRECTORY_SCRIPT = ROOT / "fetch_company_directory.py"
 FETCH_INDUSTRY_FLOW_SCRIPT = ROOT / "fetch_industry_flow.py"
+FETCH_MARKET_PULSE_SCRIPT = ROOT / "fetch_market_pulse.py"
 FETCH_INDUSTRY_FUND_HISTORY_SCRIPT = ROOT / "fetch_industry_fund_history.py"
 FETCH_LEVEL2_FLOW_SCRIPT = ROOT / "fetch_level2_stock_flow.py"
 FETCH_CONCEPT_STOCKS_SCRIPT = ROOT / "fetch_concept_stocks.py"
@@ -37,6 +38,7 @@ COMPANIES_CACHE_DIR = ROOT / "companies_cache"
 COMPANY_INFO_CACHE_DIR = ROOT / "company_info_cache"
 COMPANY_DIRECTORY_FILE = ROOT / "company_directory.json"
 INDUSTRY_FLOW_CACHE_FILE = ROOT / "industry_flow_cache.json"
+MARKET_PULSE_CACHE_FILE = ROOT / "market_pulse_cache.json"
 INDUSTRY_FUND_HISTORY_CACHE_FILE = ROOT / "industry_fund_history_cache.json"
 LEVEL2_FLOW_CACHE_DIR = ROOT / "level2_flow_cache"
 CONCEPT_STOCK_CACHE_DIR = ROOT / "concept_stock_cache"
@@ -55,6 +57,7 @@ except Exception:
     SHANGHAI = timezone(timedelta(hours=8), name="Asia/Shanghai")
 REFRESH_COOLDOWN_SECONDS = 300
 INDUSTRY_FLOW_COOLDOWN_SECONDS = 30
+MARKET_PULSE_COOLDOWN_SECONDS = 60
 CONCEPT_ROTATION_COOLDOWN_SECONDS = 300
 COMPANY_LIST_COOLDOWN_SECONDS = 120
 
@@ -64,6 +67,9 @@ last_error: str | None = None
 industry_flow_lock = threading.Lock()
 last_industry_flow_attempt = 0.0
 last_industry_flow_error: str | None = None
+market_pulse_lock = threading.Lock()
+last_market_pulse_attempt = 0.0
+last_market_pulse_error: str | None = None
 industry_fund_history_lock = threading.Lock()
 last_industry_fund_history_attempt = 0.0
 last_industry_fund_history_error: str | None = None
@@ -229,6 +235,62 @@ def refresh_industry_flow() -> tuple[dict | None, bool, str | None]:
             read_industry_flow(),
             attempted,
             last_industry_flow_error,
+        )
+
+
+def read_market_pulse() -> dict | None:
+    try:
+        return json.loads(MARKET_PULSE_CACHE_FILE.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, OSError):
+        return None
+
+
+def refresh_market_pulse(
+    force: bool = False,
+) -> tuple[dict | None, bool, str | None]:
+    global last_market_pulse_attempt, last_market_pulse_error
+    with market_pulse_lock:
+        cached = read_market_pulse()
+        recently_attempted = (
+            time.monotonic() - last_market_pulse_attempt
+            < MARKET_PULSE_COOLDOWN_SECONDS
+        )
+        cache_is_fresh = False
+        if MARKET_PULSE_CACHE_FILE.exists():
+            cache_is_fresh = (
+                time.time() - MARKET_PULSE_CACHE_FILE.stat().st_mtime
+                < MARKET_PULSE_COOLDOWN_SECONDS
+            )
+        needs_refresh = (
+            cached is None
+            or force
+            or (not recently_attempted and not cache_is_fresh)
+        )
+        attempted = False
+        if needs_refresh:
+            attempted = True
+            last_market_pulse_attempt = time.monotonic()
+            result = subprocess.run(
+                [sys.executable, str(FETCH_MARKET_PULSE_SCRIPT)],
+                cwd=ROOT,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=210,
+                check=False,
+            )
+            if result.returncode != 0:
+                last_market_pulse_error = (
+                    result.stderr
+                    or result.stdout
+                    or "market pulse refresh failed"
+                ).strip()
+            else:
+                last_market_pulse_error = None
+        return (
+            read_market_pulse(),
+            attempted,
+            last_market_pulse_error,
         )
 
 
@@ -999,6 +1061,35 @@ class DashboardHandler(SimpleHTTPRequestHandler):
                 self.send_error(
                     HTTPStatus.SERVICE_UNAVAILABLE,
                     error or "No industry flow data",
+                )
+                return
+            body = json.dumps(
+                data,
+                ensure_ascii=False,
+                separators=(",", ":"),
+            ).encode("utf-8")
+            self.send_response(HTTPStatus.OK)
+            self.send_header("Content-Type", "application/json; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("X-Refresh-Attempted", str(attempted).lower())
+            self.send_header("X-Quote-Time", str(data.get("quoteTime") or ""))
+            if error:
+                self.send_header("X-Refresh-Error", "1")
+            self.end_headers()
+            self.wfile.write(body)
+            return
+        if parsed.path == "/api/market-pulse":
+            query = parse_qs(parsed.query)
+            force = query.get("refresh", [""])[0].lower() in {
+                "1",
+                "true",
+                "yes",
+            }
+            data, attempted, error = refresh_market_pulse(force=force)
+            if data is None:
+                self.send_error(
+                    HTTPStatus.SERVICE_UNAVAILABLE,
+                    error or "No market pulse data",
                 )
                 return
             body = json.dumps(
