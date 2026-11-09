@@ -5371,6 +5371,22 @@
     }
   }
 
+  function companyTradingCatalysts(securityCode) {
+    const eventPayload = state.eventThemePayload || standalone?.eventThemes;
+    const themes = Array.isArray(eventPayload?.themes)
+      ? eventPayload.themes
+      : [];
+    const normalizedCode = String(securityCode || "").toUpperCase();
+    return themes
+      .map((theme) => {
+        const stock = (theme.stocks || []).find(
+          (item) => String(item.code || "").toUpperCase() === normalizedCode,
+        );
+        return stock ? { theme, stock } : null;
+      })
+      .filter(Boolean);
+  }
+
   function renderCompanyInfo(payload, company) {
     const fragment = document.createDocumentFragment();
     const market = payload.market;
@@ -5704,6 +5720,58 @@
     appendIndustryNode("三级", industryPath.level3Name, 3, false);
     fragment.append(industrySwitch);
 
+    const catalysts = companyTradingCatalysts(payload.code || company.code);
+    if (catalysts.length) {
+      const catalystSection = document.createElement("section");
+      catalystSection.className = "company-catalyst";
+      const primary = catalysts[0];
+      const reasonParts = String(primary.stock.reasonText || "")
+        .split("+")
+        .map((item) => item.trim())
+        .filter(Boolean);
+      const eventDate =
+        primary.stock.lastLimitTime || primary.stock.firstLimitTime
+          ? new Date(
+              (primary.stock.lastLimitTime || primary.stock.firstLimitTime) *
+                1000,
+            )
+          : null;
+      catalystSection.innerHTML = `
+        <div class="company-catalyst-heading">
+          <div>
+            <p class="panel-kicker">TRADING CATALYST</p>
+            <h5>最近涨停催化</h5>
+          </div>
+          <span>${eventDate ? `涨停 ${formatFlowTime(eventDate.toISOString())}` : "最近交易日"}</span>
+        </div>
+        <div class="company-catalyst-summary">
+          <span>
+            <small>所属申万行业</small>
+            <strong>${escapeHTML(industryPath.level2Name || industryPath.level1Name || payload.industry || "—")}</strong>
+          </span>
+          <span>
+            <small>当日涨停原因</small>
+            <div class="company-catalyst-tags">
+              ${reasonParts
+                .map(
+                  (reason) =>
+                    `<b>${escapeHTML(reason)}</b>`,
+                )
+                .join("")}
+            </div>
+          </span>
+          <span>
+            <small>涨停状态</small>
+            <strong>${escapeHTML(primary.stock.boardLabel || "涨停")} · ${escapeHTML(primary.stock.limitUpType || "涨停")}</strong>
+          </span>
+        </div>
+        <p>
+          涨停原因来自最近交易日涨停池，是价格异动的交易催化；“所属行业”和“核心业务相关度”仍用于基本面分类，两者不能混用。
+        </p>
+      `;
+      fragment.append(catalystSection);
+    }
+
     if (payload.concepts?.length) {
       const conceptSection = document.createElement("section");
       conceptSection.className = "company-concepts";
@@ -5903,6 +5971,9 @@
     try {
       const payload =
         preparedPayload || (await ensureCompanyInfo(company.code, true));
+      if (!state.eventThemePayload) {
+        await loadEventThemes();
+      }
       if (
         requestId !== state.companyInfoRequestId ||
         state.selectedCompanyCode !== company.code

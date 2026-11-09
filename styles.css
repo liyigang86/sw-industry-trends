@@ -3337,6 +3337,91 @@ button.company-industry-node:hover {
   line-height: 1.55;
 }
 
+.company-catalyst {
+  margin-top: 16px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, var(--warning) 28%, var(--line-soft));
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--warning) 9%, transparent), transparent 56%),
+    var(--panel-soft);
+}
+
+.company-catalyst-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.company-catalyst-heading h5 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.company-catalyst-heading > span {
+  color: var(--faint);
+  font-size: 8px;
+  white-space: nowrap;
+}
+
+.company-catalyst-summary {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.7fr) minmax(220px, 1.5fr) minmax(130px, 0.8fr);
+  gap: 9px;
+  margin-top: 11px;
+}
+
+.company-catalyst-summary > span {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--text) 2%, transparent);
+}
+
+.company-catalyst-summary small {
+  display: block;
+  color: var(--faint);
+  font-size: 7px;
+}
+
+.company-catalyst-summary strong {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 10px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.company-catalyst-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.company-catalyst-tags b {
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  font-size: 8px;
+  font-weight: 600;
+}
+
+.company-catalyst > p {
+  margin: 9px 0 0;
+  color: var(--faint);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
 .company-concepts {
   margin-top: 16px;
   padding-top: 14px;
@@ -4465,6 +4550,10 @@ button.company-industry-node:hover {
   }
 
   .market-volume-main {
+    grid-template-columns: 1fr;
+  }
+
+  .company-catalyst-summary {
     grid-template-columns: 1fr;
   }
 
