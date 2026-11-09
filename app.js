@@ -2873,16 +2873,33 @@
         (Number.isFinite(leftValue) ? leftValue : -Infinity);
     });
     const inflowCount = items.filter((item) => item.mainNetInflow > 0).length;
+    const volumeExpandedCount = items.filter(
+      (item) => Number(item.volumeChangePct) > 0,
+    ).length;
+    const volumeContractedCount = items.filter(
+      (item) => Number(item.volumeChangePct) < 0,
+    ).length;
     const strongest = items.reduce((best, item) =>
       !best || item.mainNetInflow > best.mainNetInflow ? item : best,
     null);
-    const highestVolumeRatio = items.reduce((best, item) =>
-      !best || item.volumeRatio > best.volumeRatio ? item : best,
+    const largestExpansion = items.reduce((best, item) =>
+      !best ||
+      Number(item.volumeChangePct) > Number(best.volumeChangePct)
+        ? item
+        : best,
+    null);
+    const largestContraction = items.reduce((best, item) =>
+      !best ||
+      Number(item.volumeChangePct) < Number(best.volumeChangePct)
+        ? item
+        : best,
     null);
     elements.industryFlowSummary.innerHTML = `
       <span><small>净流入行业</small><strong>${inflowCount} / ${items.length}</strong></span>
       <span><small>最强流入</small><strong>${escapeHTML(strongest?.name || "—")} ${formatYi(strongest?.mainNetInflow)}</strong></span>
-      <span><small>最高量比</small><strong>${escapeHTML(highestVolumeRatio?.name || "—")} ${formatMultiple(highestVolumeRatio?.volumeRatio)}</strong></span>
+      <span><small>预计放量 / 缩量</small><strong>${volumeExpandedCount} / ${volumeContractedCount}</strong></span>
+      <span><small>放量最多</small><strong>${escapeHTML(largestExpansion?.name || "—")} ${formatRate(Number(largestExpansion?.volumeChangePct) * 100, 1, true)}</strong></span>
+      <span><small>缩量最多</small><strong>${escapeHTML(largestContraction?.name || "—")} ${formatRate(Number(largestContraction?.volumeChangePct) * 100, 1, true)}</strong></span>
     `;
     const maxAbsFlow = Math.max(
       ...items.map((item) => Math.abs(item.mainNetInflow || 0)),
@@ -2906,7 +2923,7 @@
             class="flow-card ${direction}"
             data-industry-code="${escapeHTML(item.swCode || "")}"
             style="--flow-width:${(12 + strength * 88).toFixed(1)}%;--flow-tint:${(strength * 11).toFixed(1)}%"
-            aria-label="查看${escapeHTML(item.name)}走势，主力净流入${formatYi(item.mainNetInflow)}，量比${formatMultiple(item.volumeRatio)}"
+            aria-label="查看${escapeHTML(item.name)}走势，主力净流入${formatYi(item.mainNetInflow)}，当前成交${formatYi(item.amount, 1, false)}，预测量能${formatYi(item.predictedAmount, 1, false)}，较昨日${formatRate(Number(item.volumeChangePct) * 100, 1, true)}"
           >
             <span class="flow-card-head">
               <span class="flow-rank">${String(index + 1).padStart(2, "0")}</span>
@@ -2919,7 +2936,10 @@
             <span class="flow-card-metrics">
               <span><small>主力占比</small><b>${formatRate(item.mainNetRatio, 2, true)}</b></span>
               <span><small>量比</small><b>${formatMultiple(item.volumeRatio)}</b></span>
-              <span><small>成交额</small><b>${formatYi(item.amount, 1, false)}</b></span>
+              <span><small>当前成交</small><b>${formatYi(item.amount, 1, false)}</b></span>
+              <span title="区间 ${formatYi(item.predictedLow, 1, false)} - ${formatYi(item.predictedHigh, 1, false)}"><small>${item.volumeForecastFinal ? "全天成交" : "预计全天"}</small><b>${formatYi(item.predictedAmount, 1, false)}</b></span>
+              <span><small>较昨日量能</small><b class="${metricTone(Number(item.volumeChangePct))}">${formatRate(Number(item.volumeChangePct) * 100, 1, true)}</b></span>
+              <span><small>完成度样本</small><b>${Number(item.volumeForecastDays || 0)}日</b></span>
             </span>
           </button>
         `;

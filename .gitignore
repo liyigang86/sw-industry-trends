@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 *.log
 *.zip
+.data-cache.json
 .venv/
 venv/
 .DS_Store

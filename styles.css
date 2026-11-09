@@ -1866,7 +1866,7 @@ body[data-active-view="concept"] .controls {
 
 .flow-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 9px;
   margin-top: 13px;
 }
@@ -4318,6 +4318,10 @@ button.company-industry-node:hover {
     grid-template-columns: 1fr;
   }
 
+  .flow-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .flow-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -4461,6 +4465,10 @@ button.company-industry-node:hover {
   }
 
   .market-volume-main {
+    grid-template-columns: 1fr;
+  }
+
+  .flow-summary {
     grid-template-columns: 1fr;
   }
 
