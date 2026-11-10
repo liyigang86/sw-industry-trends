@@ -3814,6 +3814,7 @@
       start,
       end,
       xScale,
+      yScale,
       series,
       selectedCode,
       hoverGroup,
@@ -5019,6 +5020,53 @@
     `;
   }
 
+  function handleConceptIntradayClick(event) {
+    const geometry = state.conceptIntradayFlowGeometry;
+    if (!geometry || !state.conceptIntradayFlowPayload) return;
+    const rect = elements.conceptIntradayFlowChart.getBoundingClientRect();
+    const chartX =
+      ((event.clientX - rect.left) / Math.max(1, rect.width)) *
+      geometry.width;
+    const chartY =
+      ((event.clientY - rect.top) / Math.max(1, rect.height)) *
+      geometry.height;
+    if (
+      chartX < geometry.margin.left ||
+      chartX > geometry.margin.left + geometry.plotWidth ||
+      chartY < geometry.margin.top ||
+      chartY > geometry.margin.top + geometry.plotHeight
+    ) {
+      state.conceptIntradayFlowSelectedCode = null;
+      renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+      return;
+    }
+    const ratio =
+      (chartX - geometry.margin.left) / Math.max(1, geometry.plotWidth);
+    const targetTimestamp =
+      geometry.start + ratio * (geometry.end - geometry.start);
+    const nearest = geometry.series
+      .map((item) => {
+        const point = item.timestamped.reduce((best, current) =>
+          Math.abs(current.timestamp - targetTimestamp) <
+          Math.abs(best.timestamp - targetTimestamp)
+            ? current
+            : best,
+        );
+        return {
+          item,
+          distance: Math.abs(chartY - geometry.yScale(point.value)),
+        };
+      })
+      .sort((left, right) => left.distance - right.distance)[0];
+    state.conceptIntradayFlowSelectedCode =
+      nearest && nearest.distance <= 26
+        ? state.conceptIntradayFlowSelectedCode === nearest.item.code
+          ? null
+          : nearest.item.code
+        : null;
+    renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+  }
+
   function setupConceptIntradayFlow() {
     elements.conceptIntradayFlowMode.addEventListener("click", (event) => {
       const button = event.target.closest("button[data-intraday-flow-mode]");
@@ -5096,11 +5144,10 @@
       "pointerleave",
       hideConceptIntradayPointer,
     );
-    elements.conceptIntradayFlowChart.addEventListener("click", (event) => {
-      state.conceptIntradayFlowSelectedCode = null;
-      hideConceptIntradayPointer();
-      drawConceptIntradayFlowChart();
-    });
+    elements.conceptIntradayFlowChart.addEventListener(
+      "click",
+      handleConceptIntradayClick,
+    );
     if ("ResizeObserver" in window) {
       const observer = new ResizeObserver(() =>
         requestAnimationFrame(drawConceptIntradayFlowChart),
