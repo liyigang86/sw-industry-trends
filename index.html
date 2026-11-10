@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="description" content="申万一级行业趋势、相对强弱与近期轮动热力图">
   <title>申万一级行业趋势</title>
-    <link rel="stylesheet" href="styles.css?v=20261110-flowhighlight2">
+    <link rel="stylesheet" href="styles.css?v=20261110-flowkeyboard1">
   <script>
     (() => {
       const saved = localStorage.getItem("sw-trend-theme");
@@ -661,10 +661,16 @@
             正在获取分时资金曲线…
           </div>
           <div class="concept-intraday-flow-chart-wrap" id="concept-intraday-flow-chart-wrap">
-            <svg id="concept-intraday-flow-chart" role="img" aria-label="概念板块盘中累计主力净流入曲线"></svg>
+            <svg
+              id="concept-intraday-flow-chart"
+              role="img"
+              tabindex="0"
+              aria-label="概念板块盘中累计主力净流入曲线"
+              aria-keyshortcuts="ArrowUp ArrowDown Home End Escape"
+            ></svg>
           </div>
           <div class="chart-readout concept-intraday-flow-readout" id="concept-intraday-flow-readout">
-            点击图例突出单条曲线；移到曲线上查看各概念同一时刻的累计资金流
+            点击曲线或图例突出单条；获得焦点后可用 ↑ / ↓ 切换，Esc 取消
           </div>
           <div class="concept-intraday-flow-legend" id="concept-intraday-flow-legend" aria-label="概念资金流图例"></div>
           <p class="concept-intraday-flow-method">
@@ -814,6 +820,6 @@
     行业数据没有正确载入，请确认 <code>data.js</code> 与页面位于同一目录。
   </div>
   <script src="data.js"></script>
-  <script src="bootstrap.js?v=20261110-flowhighlight2"></script>
+  <script src="bootstrap.js?v=20261110-flowkeyboard1"></script>
 </body>
 </html>

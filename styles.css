@@ -566,6 +566,12 @@ h1 {
   height: auto;
 }
 
+#concept-intraday-flow-chart:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  outline-offset: -3px;
+  border-radius: 10px;
+}
+
 .concept-intraday-flow-line {
   fill: none;
   stroke-width: 1.55;

@@ -8,7 +8,7 @@
 
   const appLoaded = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "app.js?v=20261110-flowhighlight2";
+    script.src = "app.js?v=20261110-flowkeyboard1";
     script.onload = resolve;
     script.onerror = reject;
     document.body.append(script);

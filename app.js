@@ -5065,6 +5065,51 @@
           : nearest.item.code
         : null;
     renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+    elements.conceptIntradayFlowChart.focus({ preventScroll: true });
+  }
+
+  function navigateConceptIntradayFlow(command) {
+    const payload = state.conceptIntradayFlowPayload;
+    if (!payload) return;
+    const concepts = (payload.concepts || []).filter(
+      (item) => item.showInChart !== false,
+    );
+    const focusCodes =
+      state.conceptIntradayFlowScope === "focus"
+        ? conceptIntradayFocusCodes(payload)
+        : null;
+    const codes = concepts
+      .filter(
+        (item) =>
+          (!focusCodes || focusCodes.has(item.code)) &&
+          !state.conceptIntradayFlowHidden.has(item.code),
+      )
+      .map((item) => item.code);
+    if (!codes.length) return;
+    if (command === "clear") {
+      state.conceptIntradayFlowSelectedCode = null;
+    } else {
+      const currentIndex = codes.indexOf(
+        state.conceptIntradayFlowSelectedCode,
+      );
+      let nextIndex;
+      if (command === "home") {
+        nextIndex = 0;
+      } else if (command === "end") {
+        nextIndex = codes.length - 1;
+      } else if (currentIndex < 0) {
+        nextIndex = command === "up" ? codes.length - 1 : 0;
+      } else {
+        const step = command === "up" ? -1 : 1;
+        nextIndex = (currentIndex + step + codes.length) % codes.length;
+      }
+      state.conceptIntradayFlowSelectedCode = codes[nextIndex];
+    }
+    renderConceptIntradayFlow(payload);
+    requestAnimationFrame(() => {
+      hideConceptIntradayPointer();
+      elements.conceptIntradayFlowChart.focus({ preventScroll: true });
+    });
   }
 
   function setupConceptIntradayFlow() {
@@ -5136,6 +5181,27 @@
         renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
       }
     });
+    const handleKeyboardNavigation = (event) => {
+      const commands = {
+        ArrowUp: "up",
+        ArrowDown: "down",
+        Home: "home",
+        End: "end",
+        Escape: "clear",
+      };
+      const command = commands[event.key];
+      if (!command) return;
+      event.preventDefault();
+      navigateConceptIntradayFlow(command);
+    };
+    elements.conceptIntradayFlowChart.addEventListener(
+      "keydown",
+      handleKeyboardNavigation,
+    );
+    elements.conceptIntradayFlowLegend.addEventListener(
+      "keydown",
+      handleKeyboardNavigation,
+    );
     elements.conceptIntradayFlowChart.addEventListener(
       "pointermove",
       handleConceptIntradayPointer,
