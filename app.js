@@ -5182,6 +5182,9 @@
           renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
         }
         syncConceptIntradaySelectionToScreener();
+        requestAnimationFrame(() =>
+          elements.conceptIntradayFlowChart.focus({ preventScroll: true }),
+        );
       }, 190);
     });
     elements.conceptIntradayFlowLegend.addEventListener("dblclick", (event) => {
