@@ -168,6 +168,8 @@
     conceptIntradayFlowMode: "cumulative",
     conceptIntradayFlowScope: "focus",
     conceptIntradayFlowHidden: new Set(),
+    conceptIntradayFlowSelectedCode: null,
+    conceptIntradayFlowLegendTimer: null,
     conceptIntradayFlowGeometry: null,
     conceptRotationPayload: null,
     conceptRotationMode: "week",
@@ -3599,6 +3601,7 @@
   function applyConceptIntradayFlowScope(payload, scope) {
     state.conceptIntradayFlowScope = scope;
     state.conceptIntradayFlowHidden.clear();
+    state.conceptIntradayFlowSelectedCode = null;
     elements.conceptIntradayFlowScope
       .querySelectorAll("button[data-intraday-flow-scope]")
       .forEach((button) => {
@@ -3641,6 +3644,11 @@
       ),
       timestamped: conceptIntradayDisplayPoints(item),
     }));
+    const selectedCode = series.some(
+      (item) => item.code === state.conceptIntradayFlowSelectedCode,
+    )
+      ? state.conceptIntradayFlowSelectedCode
+      : null;
     if (!series.length) {
       elements.conceptIntradayFlowChart.replaceChildren();
       return;
@@ -3718,7 +3726,14 @@
       elements.conceptIntradayFlowChart.append(label);
     }
 
-    series.forEach((item) => {
+    const drawSeries = series
+      .slice()
+      .sort((left, right) => {
+        if (left.code === selectedCode) return 1;
+        if (right.code === selectedCode) return -1;
+        return 0;
+      });
+    drawSeries.forEach((item) => {
       const path = item.timestamped
         .map((point, index) => {
           const x = xScale(point.timestamp);
@@ -3728,7 +3743,7 @@
         .join(" ");
       elements.conceptIntradayFlowChart.append(
         svgElement("path", {
-          class: "concept-intraday-flow-line",
+          class: `concept-intraday-flow-line ${selectedCode ? (item.code === selectedCode ? "is-selected" : "is-dimmed") : ""}`,
           d: path,
           stroke: item.color,
         }),
@@ -3773,7 +3788,7 @@
         x: x + 7,
         y: item.labelY,
         fill: item.color,
-        class: "concept-intraday-end-label",
+        class: `concept-intraday-end-label ${selectedCode ? (item.code === selectedCode ? "is-selected" : "is-dimmed") : ""}`,
       });
       label.textContent = `${item.name} ${formatSignedFlowNumber(item.value, 1)}`;
       elements.conceptIntradayFlowChart.append(label);
@@ -3800,6 +3815,7 @@
       end,
       xScale,
       series,
+      selectedCode,
       hoverGroup,
       crosshair,
     };
@@ -3821,6 +3837,16 @@
         (!focusCodes || focusCodes.has(item.code)) &&
         !state.conceptIntradayFlowHidden.has(item.code),
     ).length;
+    const selectedCode =
+      state.conceptIntradayFlowSelectedCode &&
+      concepts.some(
+        (item) =>
+          item.code === state.conceptIntradayFlowSelectedCode &&
+          !state.conceptIntradayFlowHidden.has(item.code),
+      )
+        ? state.conceptIntradayFlowSelectedCode
+        : null;
+    state.conceptIntradayFlowSelectedCode = selectedCode;
     const modeLabel =
       state.conceptIntradayFlowMode === "velocity"
         ? "概念分时资金速度"
@@ -3880,6 +3906,8 @@
     elements.conceptIntradayFlowLegend.innerHTML = legendConcepts
       .map((item) => {
         const hidden = state.conceptIntradayFlowHidden.has(item.code);
+        const selected = item.code === selectedCode;
+        const dimmed = Boolean(selectedCode && !selected);
         const metrics = metricsByCode.get(item.code);
         const colorIndex = concepts.findIndex(
           (entry) => entry.code === item.code,
@@ -3893,9 +3921,10 @@
         return `
           <button
             type="button"
-            class="concept-intraday-flow-legend-item ${hidden ? "is-hidden" : ""}"
+            class="concept-intraday-flow-legend-item ${hidden ? "is-hidden" : ""} ${selected ? "is-selected" : ""} ${dimmed ? "is-dimmed" : ""}"
             data-concept-flow-code="${escapeHTML(item.code)}"
-            title="1分钟速度 ${formatSignedFlowNumber(metrics.velocity1, 2)}；5分钟速度 ${formatSignedFlowNumber(metrics.velocity5, 2)}；加速度 ${formatSignedFlowNumber(metrics.acceleration5, 2)}；近10分钟正向率 ${formatRate(metrics.positiveRate10 * 100, 0)}"
+            aria-pressed="${selected ? "true" : "false"}"
+            title="单击突出；双击隐藏或恢复。1分钟速度 ${formatSignedFlowNumber(metrics.velocity1, 2)}；5分钟速度 ${formatSignedFlowNumber(metrics.velocity5, 2)}；加速度 ${formatSignedFlowNumber(metrics.acceleration5, 2)}；近10分钟正向率 ${formatRate(metrics.positiveRate10 * 100, 0)}"
           >
             <i style="background:${conceptIntradayColor(colorIndex)}"></i>
             <span>${escapeHTML(item.name)}</span>
@@ -4912,10 +4941,24 @@
     const geometry = state.conceptIntradayFlowGeometry;
     if (!geometry) return;
     geometry.hoverGroup.setAttribute("opacity", "0");
+    const selected = geometry.series.find(
+      (item) => item.code === geometry.selectedCode,
+    );
+    if (selected) {
+      const last = selected.timestamped.at(-1);
+      const unit =
+        state.conceptIntradayFlowMode === "velocity" ? "亿/分" : "亿";
+      elements.conceptIntradayFlowReadout.innerHTML = `
+        <strong>已突出 ${escapeHTML(selected.name)}</strong>
+        · 收盘/最新 ${formatSignedFlowNumber(last?.value ?? 0, 2)}${unit}
+        · 再次点击图例恢复全部曲线
+      `;
+      return;
+    }
     elements.conceptIntradayFlowReadout.textContent =
       state.conceptIntradayFlowMode === "velocity"
-        ? "移到曲线上查看各概念同一时刻的5分钟资金速度"
-        : "移到曲线上查看各概念同一时刻的累计资金流";
+        ? "点击图例突出单条曲线；移到曲线上查看同一时刻的5分钟资金速度"
+        : "点击图例突出单条曲线；移到曲线上查看同一时刻的累计资金流";
   }
 
   function handleConceptIntradayPointer(event) {
@@ -5018,10 +5061,28 @@
       const button = event.target.closest("button[data-concept-flow-code]");
       if (!button) return;
       const code = button.dataset.conceptFlowCode;
+      window.clearTimeout(state.conceptIntradayFlowLegendTimer);
+      state.conceptIntradayFlowLegendTimer = window.setTimeout(() => {
+        state.conceptIntradayFlowSelectedCode =
+          state.conceptIntradayFlowSelectedCode === code ? null : code;
+        if (state.conceptIntradayFlowPayload) {
+          renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+        }
+      }, 190);
+    });
+    elements.conceptIntradayFlowLegend.addEventListener("dblclick", (event) => {
+      const button = event.target.closest("button[data-concept-flow-code]");
+      if (!button) return;
+      event.preventDefault();
+      window.clearTimeout(state.conceptIntradayFlowLegendTimer);
+      const code = button.dataset.conceptFlowCode;
       if (state.conceptIntradayFlowHidden.has(code)) {
         state.conceptIntradayFlowHidden.delete(code);
       } else {
         state.conceptIntradayFlowHidden.add(code);
+        if (state.conceptIntradayFlowSelectedCode === code) {
+          state.conceptIntradayFlowSelectedCode = null;
+        }
       }
       if (state.conceptIntradayFlowPayload) {
         renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
@@ -5035,6 +5096,11 @@
       "pointerleave",
       hideConceptIntradayPointer,
     );
+    elements.conceptIntradayFlowChart.addEventListener("click", (event) => {
+      state.conceptIntradayFlowSelectedCode = null;
+      hideConceptIntradayPointer();
+      drawConceptIntradayFlowChart();
+    });
     if ("ResizeObserver" in window) {
       const observer = new ResizeObserver(() =>
         requestAnimationFrame(drawConceptIntradayFlowChart),
