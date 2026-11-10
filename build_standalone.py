@@ -74,12 +74,12 @@ def main() -> None:
     }
 
     index = index.replace(
-        '    <link rel="stylesheet" href="styles.css?v=20261110-flowkeyboard1">',
+        '    <link rel="stylesheet" href="styles.css?v=20261110-screenersync1">',
         f"    <style>\n{styles}\n    </style>",
     )
     index = index.replace(
         "  <script src=\"data.js\"></script>\n"
-        "  <script src=\"bootstrap.js?v=20261110-flowkeyboard1\"></script>",
+        "  <script src=\"bootstrap.js?v=20261110-screenersync1\"></script>",
         "  <script>\n"
         f"    window.SW_TREND_DATA = {script_json(data)};\n"
         f"    window.SW_STANDALONE = {script_json(standalone)};\n"

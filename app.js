@@ -170,6 +170,7 @@
     conceptIntradayFlowHidden: new Set(),
     conceptIntradayFlowSelectedCode: null,
     conceptIntradayFlowLegendTimer: null,
+    conceptIntradayFlowScreenerTimer: null,
     conceptIntradayFlowGeometry: null,
     conceptRotationPayload: null,
     conceptRotationMode: "week",
@@ -4952,6 +4953,7 @@
       elements.conceptIntradayFlowReadout.innerHTML = `
         <strong>已突出 ${escapeHTML(selected.name)}</strong>
         · 收盘/最新 ${formatSignedFlowNumber(last?.value ?? 0, 2)}${unit}
+        · 已同步下方概念反查
         · 再次点击图例恢复全部曲线
       `;
       return;
@@ -5038,6 +5040,7 @@
     ) {
       state.conceptIntradayFlowSelectedCode = null;
       renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+      syncConceptIntradaySelectionToScreener();
       return;
     }
     const ratio =
@@ -5065,7 +5068,23 @@
           : nearest.item.code
         : null;
     renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
+    syncConceptIntradaySelectionToScreener();
     elements.conceptIntradayFlowChart.focus({ preventScroll: true });
+  }
+
+  function syncConceptIntradaySelectionToScreener() {
+    window.clearTimeout(state.conceptIntradayFlowScreenerTimer);
+    state.conceptIntradayFlowScreenerTimer = null;
+    const code = state.conceptIntradayFlowSelectedCode;
+    if (!code || !state.conceptIntradayFlowPayload) return;
+    const concept = (state.conceptIntradayFlowPayload.concepts || []).find(
+      (item) => item.code === code,
+    );
+    if (!concept?.name) return;
+    elements.conceptSearchInput.value = concept.name;
+    state.conceptIntradayFlowScreenerTimer = window.setTimeout(() => {
+      loadConceptStocks(concept.name, true);
+    }, 260);
   }
 
   function navigateConceptIntradayFlow(command) {
@@ -5106,6 +5125,7 @@
       state.conceptIntradayFlowSelectedCode = codes[nextIndex];
     }
     renderConceptIntradayFlow(payload);
+    syncConceptIntradaySelectionToScreener();
     requestAnimationFrame(() => {
       hideConceptIntradayPointer();
       elements.conceptIntradayFlowChart.focus({ preventScroll: true });
@@ -5161,6 +5181,7 @@
         if (state.conceptIntradayFlowPayload) {
           renderConceptIntradayFlow(state.conceptIntradayFlowPayload);
         }
+        syncConceptIntradaySelectionToScreener();
       }, 190);
     });
     elements.conceptIntradayFlowLegend.addEventListener("dblclick", (event) => {
