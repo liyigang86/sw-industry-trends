@@ -26,9 +26,9 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 industry_names = json.loads(base64.b64decode(sys.argv[1]).decode("utf-8"))
-cached_volume = {}
-if len(sys.argv) > 2 and sys.argv[2]:
-    cached_volume = json.loads(base64.b64decode(sys.argv[2]).decode("utf-8"))
+cached_volume = json.loads(
+    base64.b64decode("__CACHED_VOLUME_PAYLOAD__").decode("utf-8")
+)
 china_tz = timezone(timedelta(hours=8))
 session = requests.Session()
 session.headers.update(
@@ -369,14 +369,18 @@ def main() -> int:
         code_by_name = {
             item["name"]: item["code"] for item in data["industries"]
         }
+        volume_payload = base64.b64encode(
+            json.dumps(cached_volume, ensure_ascii=False).encode("utf-8")
+        ).decode("ascii")
+        script = REMOTE_SCRIPT.replace(
+            "__CACHED_VOLUME_PAYLOAD__",
+            volume_payload,
+        )
         result = run_script(
-            REMOTE_SCRIPT,
+            script,
             (
                 base64.b64encode(
                     json.dumps(names, ensure_ascii=False).encode("utf-8")
-                ).decode("ascii"),
-                base64.b64encode(
-                    json.dumps(cached_volume, ensure_ascii=False).encode("utf-8")
                 ).decode("ascii"),
             ),
             timeout=240,
