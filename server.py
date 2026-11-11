@@ -16,6 +16,10 @@ from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
+
+os.environ.setdefault("PYTHONIOENCODING", "utf-8")
+os.environ.setdefault("PYTHONUTF8", "1")
+
 ROOT = Path(__file__).resolve().parent
 DATA_JSON = ROOT / "data.json"
 FETCH_SCRIPT = ROOT / "fetch_sw_trends.py"
@@ -331,6 +335,7 @@ def refresh_industry_fund_history() -> tuple[dict | None, bool, str | None]:
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
+                errors="replace",
                 timeout=240,
                 check=False,
             )
@@ -396,6 +401,7 @@ def refresh_level2_flow(
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
+                errors="replace",
                 timeout=240,
                 check=False,
             )
