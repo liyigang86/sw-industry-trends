@@ -13,6 +13,7 @@ from fetch_bridge import run_script
 
 REMOTE_SCRIPT = r'''
 import json
+import time
 from datetime import datetime, timedelta, timezone
 
 import requests
@@ -47,27 +48,39 @@ def percentile_rank(values, value):
 
 rows = []
 for page in range(1, 8):
-    response = requests.get(
-        endpoint,
-        params={
-            "pn": page,
-            "pz": 100,
-            "po": 1,
-            "np": 1,
-            "fltt": 2,
-            "invt": 2,
-            "fid": "f3",
-            "fs": "m:90+t:3+f:!50",
-            "fields": (
-                "f2,f3,f6,f8,f10,f12,f14,f24,f25,f62,f104,f105,f106,"
-                "f109,f124,f128,f136,f184"
-            ),
-        },
-        timeout=35,
-        verify=False,
-        headers=headers,
-    )
-    response.raise_for_status()
+    response = None
+    last_error = None
+    for attempt in range(6):
+        try:
+            response = requests.get(
+                endpoint,
+                params={
+                    "pn": page,
+                    "pz": 100,
+                    "po": 1,
+                    "np": 1,
+                    "fltt": 2,
+                    "invt": 2,
+                    "fid": "f3",
+                    "fs": "m:90+t:3+f:!50",
+                    "fields": (
+                        "f2,f3,f6,f8,f10,f12,f14,f24,f25,f62,f104,f105,f106,"
+                        "f109,f124,f128,f136,f184"
+                    ),
+                },
+                timeout=35,
+                verify=False,
+                headers=headers,
+            )
+            response.raise_for_status()
+            break
+        except Exception as exc:
+            last_error = exc
+            if attempt == 5:
+                raise RuntimeError(
+                    f"Concept heat page {page} failed after retries: {last_error}"
+                ) from exc
+            time.sleep(min(8, 1.2 * (attempt + 1)))
     data = response.json().get("data") or {}
     batch = data.get("diff") or []
     if isinstance(batch, dict):
