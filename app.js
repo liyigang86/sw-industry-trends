@@ -4067,7 +4067,7 @@
   function conceptFiveDimensionScore(item, concepts) {
     const persistence = item.persistence || {};
     const percentile = (values, value) =>
-      valuePercentile(values.filter(Number.isFinite), Number(value));
+      valuePercentile(values.filter(Number.isFinite), Number(value)) / 100;
     const return5Rank = percentile(
       concepts.map((entry) => Number(entry.return5d)),
       item.return5d,
