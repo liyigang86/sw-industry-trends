@@ -293,6 +293,9 @@
     conceptRotationRefresh: document.getElementById("concept-rotation-refresh"),
     conceptRotationIntro: document.getElementById("concept-rotation-intro"),
     conceptRotationGrid: document.getElementById("concept-rotation-grid"),
+    conceptFiveDimensionalList: document.getElementById(
+      "concept-five-dimensional-list",
+    ),
     conceptRotationMethod: document.getElementById("concept-rotation-method"),
     conceptRotationLossLabel: document.getElementById("concept-rotation-loss-label"),
     conceptRotationGainLabel: document.getElementById("concept-rotation-gain-label"),
@@ -3392,6 +3395,9 @@
         `;
       })
       .join("");
+    if (state.conceptRotationPayload) {
+      renderConceptRotation(state.conceptRotationPayload);
+    }
   }
 
   async function loadConceptHeat(force = false) {
@@ -4058,6 +4064,186 @@
     return "is-watch";
   }
 
+  function conceptFiveDimensionScore(item, concepts) {
+    const persistence = item.persistence || {};
+    const percentile = (values, value) =>
+      valuePercentile(values.filter(Number.isFinite), Number(value));
+    const return5Rank = percentile(
+      concepts.map((entry) => Number(entry.return5d)),
+      item.return5d,
+    );
+    const dayRank = percentile(
+      concepts.map((entry) => Number(entry.changePct)),
+      item.changePct,
+    );
+    const volumeRank = percentile(
+      concepts.map((entry) => Number(entry.volumeRatio)),
+      item.volumeRatio,
+    );
+    const flowRank = percentile(
+      concepts.map((entry) => Number(entry.mainNetRatio)),
+      item.mainNetRatio,
+    );
+    const heatConcepts = state.conceptHeatPayload?.concepts || [];
+    const normalizedName = normalizeConceptQuery(item.name);
+    const heatItem =
+      heatConcepts.find((entry) => entry.code === item.code) ||
+      heatConcepts.find(
+        (entry) => normalizeConceptQuery(entry.name) === normalizedName,
+      );
+    const overheat = clampUnit(
+      1 - Number(persistence.stabilityScore || 0) / 100,
+    );
+    const recognitionScore =
+      (return5Rank * 0.42 +
+        dayRank * 0.2 +
+        volumeRank * 0.18 +
+        (1 - overheat) * 0.2) *
+      100;
+    const eventCatalystScore = Number(heatItem?.eventCatalystScore);
+    const hasEventCatalyst = Number.isFinite(eventCatalystScore);
+    const catalystScore = hasEventCatalyst
+      ? eventCatalystScore * 0.62 + flowRank * 23 + volumeRank * 15
+      : flowRank * 48 + volumeRank * 30 + dayRank * 22;
+    const breadthScore = Math.max(
+      0,
+      Math.min(100, Number(item.upRatio || 0)),
+    );
+    const dailyCloses = (item.daily || [])
+      .slice(-60)
+      .map((bar) => Number(bar.close))
+      .filter(Number.isFinite);
+    const latestClose = dailyCloses.at(-1);
+    const recentPeak = dailyCloses.length ? Math.max(...dailyCloses) : null;
+    const drawdown =
+      Number.isFinite(latestClose) && recentPeak
+        ? clampUnit((recentPeak - latestClose) / recentPeak / 0.28)
+        : 0.5;
+    const ma20Distance = Number(
+      persistence.metrics?.ma20Distance ?? 0,
+    );
+    const positionScore = clampUnit(1 - Math.max(0, ma20Distance - 4) / 22);
+    const chipScore = clampUnit(
+      Number(persistence.stabilityScore || 50) / 100 * 0.45 +
+        drawdown * 0.3 +
+        positionScore * 0.25,
+    ) * 100;
+    const dimensions = [
+      {
+        key: "recognition",
+        label: "认知差",
+        score: recognitionScore,
+        weight: 20,
+        note: "短期动量、量能和新定价代理",
+      },
+      {
+        key: "catalyst",
+        label: "催化力度",
+        score: catalystScore,
+        weight: 25,
+        note: hasEventCatalyst
+          ? "涨停事件、资金和成交"
+          : "暂无事件映射，使用资金与成交代理",
+      },
+      {
+        key: "breadth",
+        label: "影响广度",
+        score: breadthScore,
+        weight: 20,
+        note: "概念内上涨家数占比",
+      },
+      {
+        key: "chips",
+        label: "筹码位置",
+        score: chipScore,
+        weight: 15,
+        note: "趋势稳定、区间回撤和均线位置",
+      },
+      {
+        key: "realization",
+        label: "兑现斜率",
+        score: null,
+        weight: 20,
+        note: "概念到财报收入的映射待补充",
+      },
+    ];
+    const available = dimensions.filter((entry) =>
+      Number.isFinite(entry.score),
+    );
+    const coveredWeight = available.reduce(
+      (sum, entry) => sum + entry.weight,
+      0,
+    );
+    const overall = coveredWeight
+      ? available.reduce(
+          (sum, entry) => sum + entry.score * entry.weight,
+          0,
+        ) / coveredWeight
+      : null;
+    const coverage = coveredWeight;
+    const label =
+      overall >= 80
+        ? "强持续"
+        : overall >= 65
+          ? "偏持续"
+          : overall >= 50
+            ? "观察"
+            : "退潮";
+    return {
+      overall,
+      label,
+      coverage,
+      dimensions,
+      hasEventCatalyst,
+    };
+  }
+
+  function renderConceptFiveDimensions(concepts) {
+    const ranked = concepts
+      .map((item) => ({
+        item,
+        score: conceptFiveDimensionScore(item, concepts),
+      }))
+      .filter((entry) => Number.isFinite(entry.score.overall))
+      .sort((left, right) => right.score.overall - left.score.overall)
+      .slice(0, 12);
+    if (!ranked.length) {
+      elements.conceptFiveDimensionalList.innerHTML =
+        '<p class="flow-empty">暂无可计算的概念持续性数据</p>';
+      return;
+    }
+    elements.conceptFiveDimensionalList.innerHTML = ranked
+      .map(({ item, score }) => {
+        const coverageLabel =
+          score.coverage >= 90
+            ? "高覆盖"
+            : score.coverage >= 65
+              ? "中覆盖"
+              : "低覆盖";
+        const dimensionMarkup = score.dimensions
+          .map(
+            (dimension) => `
+              <span title="${escapeHTML(dimension.note)}" class="is-${dimension.key}">
+                <small>${escapeHTML(dimension.label)}</small>
+                <b>${Number.isFinite(dimension.score) ? dimension.score.toFixed(1) : "待补"}</b>
+              </span>
+            `,
+          )
+          .join("");
+        return `
+          <button type="button" class="concept-five-card" data-concept-five-name="${escapeHTML(item.name)}">
+            <span class="concept-five-card-head">
+              <strong>${escapeHTML(item.name)}</strong>
+              <em class="${heatPersistenceTone(score.label)}">${score.overall.toFixed(1)} · ${escapeHTML(score.label)}</em>
+            </span>
+            <span class="concept-five-card-meta">${coverageLabel} ${score.coverage.toFixed(0)}%</span>
+            <span class="concept-five-dimensions">${dimensionMarkup}</span>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
   function renderConceptRotation(payload) {
     state.conceptRotationPayload = payload;
     const isDaily = state.conceptRotationMode === "day";
@@ -4096,8 +4282,11 @@
     if (!concepts.length) {
       elements.conceptRotationGrid.innerHTML =
         '<p class="flow-empty">暂无可用的概念轮动数据</p>';
+      elements.conceptFiveDimensionalList.innerHTML =
+        '<p class="flow-empty">暂无可计算的概念持续性数据</p>';
       return;
     }
+    renderConceptFiveDimensions(concepts);
 
     const fragment = document.createDocumentFragment();
     const corner = document.createElement("span");
@@ -5278,6 +5467,19 @@
     elements.conceptRotationRefresh.addEventListener("click", () =>
       loadConceptRotation(true),
     );
+    elements.conceptFiveDimensionalList.addEventListener("click", (event) => {
+      const card = event.target.closest("button[data-concept-five-name]");
+      if (!card) return;
+      const query = card.dataset.conceptFiveName;
+      elements.conceptSearchInput.value = query;
+      loadConceptStocks(query, true);
+      elements.conceptScreenerPanel.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+        block: "start",
+      });
+    });
     if (state.activeView === "concept") loadConceptRotation();
   }
 

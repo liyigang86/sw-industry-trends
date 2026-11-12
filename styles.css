@@ -1020,6 +1020,140 @@ h1 {
   margin-top: 8px;
 }
 
+.concept-five-panel {
+  margin-top: 15px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.concept-five-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.concept-five-heading h3 {
+  margin: 3px 0 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.concept-five-heading > span {
+  color: var(--faint);
+  font-size: 8px;
+}
+
+.concept-five-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.concept-five-card {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid var(--line-soft);
+  border-radius: 11px;
+  color: var(--text);
+  background: var(--panel-soft);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+}
+
+.concept-five-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 38%, var(--line));
+  background: color-mix(in srgb, var(--accent) 4%, var(--panel-soft));
+}
+
+.concept-five-card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.concept-five-card-head strong {
+  overflow: hidden;
+  font-size: 10px;
+  font-weight: 620;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.concept-five-card-head em {
+  flex: 0 0 auto;
+  color: var(--muted);
+  font-family: "Avenir Next", "DIN Alternate", "Bahnschrift", sans-serif;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 650;
+}
+
+.concept-five-card-head em.is-strong {
+  color: var(--up);
+}
+
+.concept-five-card-head em.is-continuing {
+  color: var(--warning);
+}
+
+.concept-five-card-head em.is-fading {
+  color: var(--down);
+}
+
+.concept-five-card-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--faint);
+  font-size: 7px;
+}
+
+.concept-five-dimensions {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 3px;
+  margin-top: 8px;
+}
+
+.concept-five-dimensions > span {
+  min-width: 0;
+  padding: 5px 3px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 3.5%, transparent);
+  text-align: center;
+}
+
+.concept-five-dimensions small,
+.concept-five-dimensions b {
+  display: block;
+}
+
+.concept-five-dimensions small {
+  overflow: hidden;
+  color: var(--faint);
+  font-size: 6px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.concept-five-dimensions b {
+  margin-top: 2px;
+  color: var(--muted);
+  font-family: "Avenir Next", "DIN Alternate", "Bahnschrift", sans-serif;
+  font-size: 9px;
+}
+
+.concept-five-method {
+  margin: 9px 0 0;
+  color: var(--faint);
+  font-size: 8px;
+  line-height: 1.55;
+}
+
 .concept-rotation-method {
   margin: 9px 0 0;
   color: var(--faint);
@@ -4498,6 +4632,10 @@ button.company-industry-node:hover {
     grid-template-columns: 1fr;
   }
 
+  .concept-five-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .flow-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -4649,6 +4787,15 @@ button.company-industry-node:hover {
   }
 
   .company-catalyst-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .concept-five-heading {
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .concept-five-grid {
     grid-template-columns: 1fr;
   }
 
