@@ -4128,6 +4128,12 @@
         drawdown * 0.3 +
         positionScore * 0.25,
     ) * 100;
+    const realization = item.realization || {};
+    const realizationScore =
+      realization.score == null ? Number.NaN : Number(realization.score);
+    const realizationCoverage = clampUnit(
+      Number(realization.coverage || 0) / 100,
+    );
     const dimensions = [
       {
         key: "recognition",
@@ -4162,21 +4168,31 @@
       {
         key: "realization",
         label: "兑现斜率",
-        score: null,
+        score: Number.isFinite(realizationScore)
+          ? realizationScore
+          : null,
         weight: 20,
-        note: "概念到财报收入的映射待补充",
+        quality: realizationCoverage,
+        note: Number.isFinite(realizationScore)
+          ? `${realization.stage || "财报验证"}，成分股财务匹配 ${Number(realization.coverage || 0).toFixed(1)}%，报告期 ${realization.reportDate || "最新"}`
+          : "概念到财报收入的映射待补充",
       },
     ];
     const available = dimensions.filter((entry) =>
       Number.isFinite(entry.score),
     );
     const coveredWeight = available.reduce(
-      (sum, entry) => sum + entry.weight,
+      (sum, entry) =>
+        sum + entry.weight * (entry.quality == null ? 1 : entry.quality),
       0,
     );
     const overall = coveredWeight
       ? available.reduce(
-          (sum, entry) => sum + entry.score * entry.weight,
+          (sum, entry) =>
+            sum +
+            entry.score *
+              entry.weight *
+              (entry.quality == null ? 1 : entry.quality),
           0,
         ) / coveredWeight
       : null;

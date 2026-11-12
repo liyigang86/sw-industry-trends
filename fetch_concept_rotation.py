@@ -13,6 +13,8 @@ from fetch_bridge import run_script
 
 REMOTE_SCRIPT = r'''
 import json
+import math
+import statistics
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta, timezone
 
@@ -24,6 +26,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 LIST_ENDPOINT = "https://push2.eastmoney.com/api/qt/clist/get"
 HISTORY_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/kline/get"
 FLOW_ENDPOINT = "https://push2his.eastmoney.com/api/qt/stock/fflow/daykline/get"
+FINANCE_ENDPOINT = "https://datacenter.eastmoney.com/securities/api/data/v1/get"
 HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,6 +49,250 @@ def percentile_rank(values, value):
     below = sum(1 for item in values if item < value)
     equal = sum(1 for item in values if item == value)
     return (below + equal * 0.5) / len(values)
+
+
+def concept_board_members(board_code):
+    members = {}
+    for page in range(1, 8):
+        response = requests.get(
+            LIST_ENDPOINT,
+            params={
+                "pn": page,
+                "pz": 100,
+                "po": 1,
+                "np": 1,
+                "fltt": 2,
+                "invt": 2,
+                "fid": "f20",
+                "fs": f"b:{board_code}+f:!50",
+                "fields": "f12,f13,f14,f20",
+            },
+            timeout=35,
+            verify=False,
+            headers=HEADERS,
+        )
+        response.raise_for_status()
+        data = response.json().get("data") or {}
+        batch = data.get("diff") or []
+        for row in batch:
+            stock_code = str(row.get("f12") or "").strip()
+            if not stock_code:
+                continue
+            market_id = int(row.get("f13") or 0)
+            if stock_code.startswith(("4", "8", "92")):
+                exchange = "BJ"
+            else:
+                exchange = "SH" if market_id == 1 else "SZ"
+            security_code = f"{stock_code}.{exchange}"
+            members[security_code] = {
+                "code": security_code,
+                "name": row.get("f14") or stock_code,
+                "marketCap": number(row.get("f20")),
+            }
+        total = int(data.get("total") or 0)
+        if not batch or len(members) >= total:
+            break
+    return list(members.values())
+
+
+def latest_finance_report_date():
+    response = requests.get(
+        FINANCE_ENDPOINT,
+        params={
+            "reportName": "RPT_F10_FINANCE_MAINFINADATA",
+            "columns": "SECUCODE,REPORT_DATE",
+            "sortColumns": "REPORT_DATE",
+            "sortTypes": "-1",
+            "pageNumber": 1,
+            "pageSize": 1,
+        },
+        timeout=40,
+        verify=False,
+        headers=HEADERS,
+    )
+    response.raise_for_status()
+    rows = ((response.json().get("result") or {}).get("data") or [])
+    if not rows:
+        return None
+    return str(rows[0].get("REPORT_DATE") or "").split(" ")[0]
+
+
+def fetch_finance_page(report_date, page):
+    response = requests.get(
+        FINANCE_ENDPOINT,
+        params={
+            "reportName": "RPT_F10_FINANCE_MAINFINADATA",
+            "columns": (
+                "SECUCODE,REPORT_DATE,TOTALOPERATEREVETZ,"
+                "PARENTNETPROFITTZ,ROEJQ,NCO_NETPROFIT"
+            ),
+            "filter": f"(REPORT_DATE='{report_date}')",
+            "sortColumns": "REPORT_DATE",
+            "sortTypes": "-1",
+            "pageNumber": page,
+            "pageSize": 500,
+        },
+        timeout=45,
+        verify=False,
+        headers=HEADERS,
+    )
+    response.raise_for_status()
+    result = response.json().get("result") or {}
+    return int(result.get("pages") or 0), result.get("data") or []
+
+
+def fetch_all_financials():
+    report_date = latest_finance_report_date()
+    if not report_date:
+        return None, {}
+    first_pages, first_rows = fetch_finance_page(report_date, 1)
+    rows = list(first_rows)
+    if first_pages > 1:
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [
+                executor.submit(fetch_finance_page, report_date, page)
+                for page in range(2, first_pages + 1)
+            ]
+            for future in as_completed(futures):
+                _, batch = future.result()
+                rows.extend(batch)
+    by_code = {}
+    for row in rows:
+        code = str(row.get("SECUCODE") or "").upper()
+        if not code:
+            continue
+        by_code[code] = {
+            "revenueGrowth": number(row.get("TOTALOPERATEREVETZ")),
+            "profitGrowth": number(row.get("PARENTNETPROFITTZ")),
+            "roe": number(row.get("ROEJQ")),
+            "cashToProfit": number(row.get("NCO_NETPROFIT")),
+        }
+    return report_date, by_code
+
+
+def realization_profile(members, financials, report_date):
+    records = [
+        {
+            **member,
+            **financials[member["code"]],
+        }
+        for member in members
+        if member["code"] in financials
+    ]
+    if not records:
+        return {
+            "score": None,
+            "coverage": 0,
+            "memberCount": len(members),
+            "matchedCount": 0,
+            "stage": "财报未覆盖",
+            "confidence": "低",
+            "reportDate": report_date,
+        }
+
+    def clamp(value):
+        return min(1.0, max(0.0, value))
+
+    def weighted_average(values):
+        pairs = []
+        for record, value in zip(records, values):
+            if value is None:
+                continue
+            weight = math.sqrt(max(0, record.get("marketCap") or 0)) + 1
+            pairs.append((value, weight))
+        if not pairs:
+            return None
+        return sum(value * weight for value, weight in pairs) / sum(
+            weight for _, weight in pairs
+        )
+
+    revenues = [record.get("revenueGrowth") for record in records]
+    profits = [record.get("profitGrowth") for record in records]
+    roes = [record.get("roe") for record in records]
+    cash_values = [record.get("cashToProfit") for record in records]
+    validation = weighted_average(
+        [
+            (
+                (
+                    int(revenue is not None and revenue > 0)
+                    + int(profit is not None and profit > 0)
+                    + int(roe is not None and roe > 0)
+                    + int(cash is not None and cash > 0)
+                )
+                / 4
+                if any(
+                    value is not None
+                    for value in (revenue, profit, roe, cash)
+                )
+                else None
+            )
+            for revenue, profit, roe, cash in zip(
+                revenues,
+                profits,
+                roes,
+                cash_values,
+            )
+        ]
+    )
+    growth_strength = weighted_average(
+        [
+            (
+                (
+                    clamp(((revenue or -30) + 20) / 60)
+                    + clamp(((profit or -50) + 20) / 100)
+                )
+                / 2
+            )
+            for revenue, profit in zip(revenues, profits)
+        ]
+    )
+    validation_score = (validation or 0) * 100
+    growth_score = (growth_strength or 0) * 100
+    score = validation_score * 0.65 + growth_score * 0.35
+    coverage = len(records) / max(1, len(members)) * 100
+    stage = (
+        "财报验证"
+        if score >= 75
+        else "部分验证"
+        if score >= 60
+        else "初步验证"
+        if score >= 45
+        else "尚未验证"
+    )
+    confidence = (
+        "高"
+        if coverage >= 75 and len(records) >= 20
+        else "中"
+        if coverage >= 50 and len(records) >= 10
+        else "低"
+    )
+    return {
+        "score": round(score, 2),
+        "coverage": round(coverage, 2),
+        "memberCount": len(members),
+        "matchedCount": len(records),
+        "validationScore": round(validation_score, 2),
+        "growthScore": round(growth_score, 2),
+        "medianRevenueGrowth": round(
+            statistics.median(
+                [value for value in revenues if value is not None]
+            ),
+            2,
+        )
+        if any(value is not None for value in revenues)
+        else None,
+        "medianProfitGrowth": round(
+            statistics.median(
+                [value for value in profits if value is not None]
+            ),
+            2,
+        )
+        if any(value is not None for value in profits)
+        else None,
+        "stage": stage,
+        "confidence": confidence,
+        "reportDate": report_date,
+    }
 
 
 def history(code):
@@ -479,6 +726,33 @@ for source in (
         selected[item["code"]] = item
 selected_concepts = list(selected.values())
 
+member_codes_by_concept = {}
+with ThreadPoolExecutor(max_workers=8) as executor:
+    futures = {
+        executor.submit(concept_board_members, item["code"]): item["code"]
+        for item in selected_concepts
+    }
+    for future in as_completed(futures):
+        code = futures[future]
+        try:
+            member_codes_by_concept[code] = future.result()
+        except Exception:
+            member_codes_by_concept[code] = []
+
+try:
+    finance_report_date, financials_by_code = fetch_all_financials()
+except Exception:
+    finance_report_date, financials_by_code = None, {}
+
+realization_by_concept = {
+    item["code"]: realization_profile(
+        member_codes_by_concept.get(item["code"], []),
+        financials_by_code,
+        finance_report_date,
+    )
+    for item in selected_concepts
+}
+
 data_by_code = {}
 with ThreadPoolExecutor(max_workers=6) as executor:
     futures = {
@@ -514,6 +788,16 @@ for item in selected_concepts:
         continue
     item["flows"] = flows[-10:]
     item["persistence"] = persistence_score(item, bars, flows)
+    item["realization"] = realization_by_concept.get(
+        item["code"],
+        {
+            "score": None,
+            "coverage": 0,
+            "stage": "财报未覆盖",
+            "confidence": "低",
+            "reportDate": finance_report_date,
+        },
+    )
     output.append(item)
 
 latest_timestamp = max(quote_timestamps) if quote_timestamps else 0
@@ -547,7 +831,7 @@ print(
 def main() -> int:
     root = Path(__file__).resolve().parent
     try:
-        result = run_script(REMOTE_SCRIPT, (), timeout=240)
+        result = run_script(REMOTE_SCRIPT, (), timeout=480)
         payload = json.loads(result.stdout)
     except (
         OSError,

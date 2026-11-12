@@ -688,7 +688,7 @@ def refresh_concept_rotation(
                 capture_output=True,
                 text=True,
                 encoding="utf-8",
-                timeout=300,
+                timeout=480,
                 check=False,
             )
             if result.returncode != 0:
