@@ -8,7 +8,7 @@
 
   const appLoaded = new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "app.js?v=20261112-five-dimensions4";
+    script.src = "app.js?v=20261113-autorefresh1";
     script.onload = resolve;
     script.onerror = reject;
     document.body.append(script);

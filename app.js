@@ -5101,7 +5101,7 @@
         !standalone &&
         isChinaTradingWindow()
       ) {
-        loadEventThemes();
+        loadEventThemes(true);
       }
     }, 60_000);
   }
@@ -5139,7 +5139,7 @@
         !standalone &&
         isChinaTradingWindow()
       ) {
-        loadConceptHeat();
+        loadConceptHeat(true);
       }
     }, 60_000);
   }
@@ -5457,7 +5457,7 @@
         !standalone &&
         isChinaTradingWindow()
       ) {
-        loadConceptIntradayFlow();
+        loadConceptIntradayFlow(true);
       }
     }, 60_000);
   }
@@ -5497,6 +5497,16 @@
       });
     });
     if (state.activeView === "concept") loadConceptRotation();
+    window.setInterval(() => {
+      if (
+        state.activeView === "concept" &&
+        !document.hidden &&
+        !standalone &&
+        isChinaTradingWindow()
+      ) {
+        loadConceptRotation(true);
+      }
+    }, 300_000);
   }
 
   function setupConceptSearch() {
@@ -5547,7 +5557,7 @@
         !standalone &&
         isChinaTradingWindow()
       ) {
-        loadMarketPulse();
+        loadMarketPulse(true);
       }
     }, 60_000);
     document.addEventListener("visibilitychange", () => {
@@ -5557,7 +5567,7 @@
         !standalone &&
         isChinaTradingWindow()
       ) {
-        loadMarketPulse();
+        loadMarketPulse(true);
       }
     });
   }
