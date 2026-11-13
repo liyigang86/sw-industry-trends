@@ -223,6 +223,12 @@ def main() -> int:
         )
         return 1
     output = root / "concept_intraday_flow_cache.json"
+    if int(payload.get("conceptCount") or 0) == 0:
+        print(
+            "Concept intraday flow returned no concepts; keeping the previous cache.",
+            file=sys.stderr,
+        )
+        return 1
     output.write_text(
         json.dumps(payload, ensure_ascii=False, separators=(",", ":")),
         encoding="utf-8",

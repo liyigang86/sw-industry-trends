@@ -316,6 +316,11 @@ h1 {
   font-size: 9px;
 }
 
+#concept-heat-time.is-stale {
+  color: var(--warning);
+  font-weight: 600;
+}
+
 .concept-heat-intro {
   max-width: 980px;
   margin: 9px 0 0;

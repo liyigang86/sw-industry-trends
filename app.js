@@ -2693,6 +2693,22 @@
     );
   }
 
+  function isMarketDataRefreshWindow(now = new Date()) {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Shanghai",
+      weekday: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+    }).formatToParts(now);
+    const values = Object.fromEntries(
+      parts.map((part) => [part.type, part.value]),
+    );
+    if (["Sat", "Sun"].includes(values.weekday)) return false;
+    const minuteOfDay = Number(values.hour) * 60 + Number(values.minute);
+    return minuteOfDay >= 9 * 60 + 10 && minuteOfDay <= 16 * 60 + 30;
+  }
+
   function renderMarketPulse(payload) {
     state.marketPulsePayload = payload;
     const market = payload?.market || {};
@@ -3435,6 +3451,8 @@
       const response = await fetch(`/api/concept-heat${query}`, {
         cache: "no-store",
       });
+      const refreshFailed =
+        response.headers.get("X-Refresh-Error") === "1";
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json();
       let hotspotPayload = null;
@@ -3459,6 +3477,11 @@
       renderConceptHeat(
         mergeConceptHotspot(payload, hotspotPayload, intradayPayload),
       );
+      elements.conceptHeatTime.classList.toggle("is-stale", refreshFailed);
+      if (refreshFailed) {
+        elements.conceptHeatTime.textContent =
+          `数据源刷新失败 · 当前为 ${formatFlowTime(payload.quoteTime)} 缓存`;
+      }
     } catch {
       if (requestId !== state.conceptHeatRequestId) return;
       elements.conceptHeatTime.textContent = "热点概念暂时不可用";
@@ -5099,7 +5122,7 @@
         state.activeView === "concept" &&
         !document.hidden &&
         !standalone &&
-        isChinaTradingWindow()
+        isMarketDataRefreshWindow()
       ) {
         loadEventThemes(true);
       }
@@ -5137,7 +5160,7 @@
         state.activeView === "concept" &&
         !document.hidden &&
         !standalone &&
-        isChinaTradingWindow()
+        isMarketDataRefreshWindow()
       ) {
         loadConceptHeat(true);
       }
@@ -5455,7 +5478,7 @@
         state.activeView === "concept" &&
         !document.hidden &&
         !standalone &&
-        isChinaTradingWindow()
+        isMarketDataRefreshWindow()
       ) {
         loadConceptIntradayFlow(true);
       }
@@ -5502,7 +5525,7 @@
         state.activeView === "concept" &&
         !document.hidden &&
         !standalone &&
-        isChinaTradingWindow()
+        isMarketDataRefreshWindow()
       ) {
         loadConceptRotation(true);
       }
@@ -5555,7 +5578,7 @@
         state.activeView === "flow" &&
         !document.hidden &&
         !standalone &&
-        isChinaTradingWindow()
+        isMarketDataRefreshWindow()
       ) {
         loadMarketPulse(true);
       }
